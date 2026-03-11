@@ -299,6 +299,62 @@ export default function FinanceApp() {
     }
   };
 
+  const getCurrencySymbol = (currency) => {
+    const symbols = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'AED': 'د.إ',
+      'INR': '₹',
+      'CAD': 'C$',
+      'AUD': 'A$',
+      'JPY': '¥',
+      'CHF': 'CHF',
+      'CNY': '¥',
+      'SGD': 'S$',
+      'HKD': 'HK$',
+      'NZD': 'NZ$',
+      'SEK': 'kr',
+      'NOK': 'kr',
+      'DKK': 'kr',
+      'PLN': 'zł',
+      'CZK': 'Kč',
+      'HUF': 'Ft',
+      'RON': 'lei',
+      'BGN': 'лв',
+      'HRK': 'kn',
+      'RUB': '₽',
+      'TRY': '₺',
+      'ZAR': 'R',
+      'MXN': '$',
+      'BRL': 'R$',
+      'ARS': '$',
+      'CLP': '$',
+      'KRW': '₩',
+      'THB': '฿',
+      'MYR': 'RM',
+      'PHP': '₱',
+      'IDR': 'Rp',
+      'VND': '₫',
+      'PKR': '₨',
+      'BDT': '৳',
+      'LKR': 'Rs',
+      'NGN': '₦',
+      'GHS': '₵',
+      'KES': 'KSh',
+      'EGP': 'E£',
+      'SAR': '﷼',
+      'QAR': 'QR',
+      'KWD': 'د.ك',
+      'BHD': '.د.ب',
+      'OMR': 'ر.ع.',
+      'JOD': 'د.ا',
+      'LBP': 'ل.ل',
+      'ILS': '₪'
+    };
+    return symbols[currency] || '$';
+  };
+
   const getDashboardStats = (month) => {
     const filtered = transactions.filter(t => t.date.startsWith(month) && t.type !== 'income');
     const total = filtered.reduce((sum, t) => sum + t.amount, 0);
@@ -619,8 +675,8 @@ export default function FinanceApp() {
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="mb-6"><label className="block text-sm font-semibold text-slate-900 mb-2">Select Month</label><input type="month" value={dashboardMonth} onChange={(e) => setDashboardMonth(e.target.value)} className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none max-w-xs" /></div>
           <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-red-50 p-6 rounded-xl border border-red-100"><p className="text-slate-600 text-sm mb-2">Total Spent</p><p className="text-3xl font-bold text-red-600">${dashboardStats.total.toFixed(2)}</p></div>
-            <div className={`p-6 rounded-xl border ${dashboardBudgetLeft >= 0 ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}><p className="text-slate-600 text-sm mb-2">Budget Left</p><p className={`text-3xl font-bold ${dashboardBudgetLeft >= 0 ? 'text-green-600' : 'text-red-600'}`}>${dashboardBudgetLeft.toFixed(2)}</p></div>
+            <div className="bg-red-50 p-6 rounded-xl border border-red-100"><p className="text-slate-600 text-sm mb-2">Total Spent</p><p className="text-3xl font-bold text-red-600">{getCurrencySymbol(userCurrency)}{dashboardStats.total.toFixed(2)}</p></div>
+            <div className={`p-6 rounded-xl border ${dashboardBudgetLeft >= 0 ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}><p className="text-slate-600 text-sm mb-2">Budget Left</p><p className={`text-3xl font-bold ${dashboardBudgetLeft >= 0 ? 'text-green-600' : 'text-red-600'}`}>{getCurrencySymbol(userCurrency)}{dashboardBudgetLeft.toFixed(2)}</p></div>
           </div>
           <div className="grid grid-cols-5 gap-3">
             <button onClick={() => { setCurrentPage('spending'); setShowPageMenu(false); }} className="flex flex-col items-center justify-center gap-2 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 transition-all cursor-pointer"><TrendingDown className="w-6 h-6 text-purple-600" /><span className="text-xs font-semibold text-purple-900">Spending</span></button>
@@ -677,7 +733,7 @@ export default function FinanceApp() {
                       >
                         {Object.entries(pieChartData).map((_, idx) => <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />)}
                       </Pie>
-                      <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value) => `${getCurrencySymbol(userCurrency)}${value.toFixed(2)}`} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -687,7 +743,7 @@ export default function FinanceApp() {
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor: val < 0 ? '#3b82f6' : COLORS[idx % COLORS.length]}}></div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-900 truncate">{cat}</p>
-                        <p className={`${val < 0 ? 'text-blue-600' : 'text-slate-600'}`}>${val.toFixed(2)}</p>
+                        <p className={`${val < 0 ? 'text-blue-600' : 'text-slate-600'}`}>{getCurrencySymbol(userCurrency)}{val.toFixed(2)}</p>
                       </div>
                       <p className={`font-bold flex-shrink-0 ${val < 0 ? 'text-blue-700' : 'text-slate-700'}`}>{val > 0 ? `${((val/totalSpending)*100).toFixed(0)}%` : 'Refund'}</p>
                     </div>
@@ -785,8 +841,8 @@ export default function FinanceApp() {
                       <div className="h-full bg-gradient-to-r from-purple-600 to-orange-500 rounded-full" style={{width: `${Math.min(pct, 100)}%`}} />
                     </div>
                     <div className="flex justify-between text-xs text-slate-600">
-                      <span>${spent.toFixed(2)}</span>
-                      <span className="text-slate-500">of ${budget.toFixed(2)}</span>
+                      <span>{getCurrencySymbol(userCurrency)}{spent.toFixed(2)}</span>
+                      <span className="text-slate-500">of {getCurrencySymbol(userCurrency)}{budget.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -855,7 +911,7 @@ export default function FinanceApp() {
                         <p className="text-xs text-slate-600">{t.details}</p>
                       </div>
                       <div className="flex items-center gap-2 lg:flex-shrink-0">
-                        <p className="font-bold lg:w-16 lg:text-right text-sm text-slate-900">${t.amount.toFixed(2)}</p>
+                        <p className="font-bold lg:w-16 lg:text-right text-sm text-slate-900">{getCurrencySymbol(userCurrency)}{t.amount.toFixed(2)}</p>
                         <div className="flex gap-0.5 hidden lg:flex">
                           <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-0.5 hover:bg-purple-50 rounded transition-all">✏️</button>
                           <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 hover:bg-red-50 rounded transition-all">🗑️</button>
@@ -952,17 +1008,17 @@ export default function FinanceApp() {
                   const dateObj = new Date(t.date);
                   const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                   return (
-                    <div key={t.id} className="px-4 py-2 hover:bg-slate-50 transition-all flex items-center gap-3 text-sm">
-                      <div className="w-20 font-semibold text-slate-700 text-xs">{formattedDate}</div>
-                      <div className="w-32">
+                    <div key={t.id} className="px-3 py-2 hover:bg-slate-50 transition-all flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-3 text-sm">
+                      <div className="font-semibold text-slate-700 text-xs lg:w-20">{formattedDate}</div>
+                      <div className="lg:w-32">
                         <p className={`font-semibold text-xs ${colorClass}`}>{isIncome ? '💰 Income' : t.category}</p>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-slate-600 truncate">{t.details}</p>
+                        <p className="text-xs text-slate-600">{t.details}</p>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <p className={`font-bold w-16 text-right text-sm ${isIncome ? 'text-green-600' : 'text-slate-900'}`}>${isIncome ? '+' : ''}{t.amount.toFixed(2)}</p>
-                        <div className="flex gap-0.5">
+                      <div className="flex items-center gap-2 lg:flex-shrink-0">
+                        <p className={`font-bold lg:w-16 lg:text-right text-sm ${isIncome ? 'text-green-600' : 'text-slate-900'}`}>{getCurrencySymbol(userCurrency)}{isIncome ? '+' : ''}{t.amount.toFixed(2)}</p>
+                        <div className="flex gap-0.5 hidden lg:flex">
                           <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-0.5 hover:bg-purple-50 rounded transition-all">✏️</button>
                           <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 hover:bg-red-50 rounded transition-all">🗑️</button>
                         </div>
@@ -1030,7 +1086,7 @@ export default function FinanceApp() {
               <div className="flex justify-between items-center mb-2">
                 <div>
                   <p className="text-blue-700 text-xs font-semibold mb-0.5">Monthly Income</p>
-                  <p className="text-3xl font-bold text-blue-900">${monthlyIncome.toFixed(2)}</p>
+                  <p className="text-3xl font-bold text-blue-900">{getCurrencySymbol(userCurrency)}{monthlyIncome.toFixed(2)}</p>
                 </div>
                 <div className="text-3xl">💰</div>
               </div>
@@ -1040,7 +1096,7 @@ export default function FinanceApp() {
               <div className="flex justify-between items-center mb-2">
                 <div>
                   <p className="text-purple-700 text-xs font-semibold mb-0.5">Budget Allocated</p>
-                  <p className="text-3xl font-bold text-purple-900">${dashboardBudgetTotal.toFixed(2)}</p>
+                  <p className="text-3xl font-bold text-purple-900">{getCurrencySymbol(userCurrency)}{dashboardBudgetTotal.toFixed(2)}</p>
                 </div>
                 <div className="text-3xl">📊</div>
               </div>
@@ -1052,7 +1108,7 @@ export default function FinanceApp() {
                 <div className="flex justify-between items-center mb-1">
                   <div>
                     <p className="text-orange-700 text-xs font-semibold mb-0.5">Starting Balance</p>
-                    <p className="text-2xl font-bold text-orange-900">${startingBalanceForCurrentMonth.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-orange-900">{getCurrencySymbol(userCurrency)}{startingBalanceForCurrentMonth.toFixed(2)}</p>
                   </div>
                   <div className="text-2xl">📈</div>
                 </div>
@@ -1062,7 +1118,7 @@ export default function FinanceApp() {
                 <div className="flex justify-between items-center mb-1">
                   <div>
                     <p className="text-green-700 text-xs font-semibold mb-0.5">Current Balance</p>
-                    <p className="text-2xl font-bold text-green-900">${monthCurrentBalance.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-green-900">{getCurrencySymbol(userCurrency)}{monthCurrentBalance.toFixed(2)}</p>
                   </div>
                   <div className="text-2xl">💳</div>
                 </div>
@@ -1074,19 +1130,19 @@ export default function FinanceApp() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-700">Total Income</span>
-                  <span className="font-bold text-green-600">+${monthlyIncome.toFixed(2)}</span>
+                  <span className="font-bold text-green-600">+{getCurrencySymbol(userCurrency)}{monthlyIncome.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-700">Total Spent</span>
-                  <span className="font-bold text-red-600">-${monthlyExpenses.toFixed(2)}</span>
+                  <span className="font-bold text-red-600">-{getCurrencySymbol(userCurrency)}{monthlyExpenses.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-700">Remaining Budget</span>
-                  <span className={`font-bold ${(dashboardBudgetTotal - monthlyExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>${(dashboardBudgetTotal - monthlyExpenses).toFixed(2)}</span>
+                  <span className={`font-bold ${(dashboardBudgetTotal - monthlyExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{getCurrencySymbol(userCurrency)}{(dashboardBudgetTotal - monthlyExpenses).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-700">Balance Change</span>
-                  <span className={`font-bold ${(monthlyIncome - monthlyExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{(monthlyIncome - monthlyExpenses) >= 0 ? '+' : ''}${(monthlyIncome - monthlyExpenses).toFixed(2)}</span>
+                  <span className={`font-bold ${(monthlyIncome - monthlyExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{(monthlyIncome - monthlyExpenses) >= 0 ? '+' : ''}{getCurrencySymbol(userCurrency)}{(monthlyIncome - monthlyExpenses).toFixed(2)}</span>
                 </div>
                 <div className="pt-2 border-t border-slate-200 flex justify-between font-semibold">
                   <span className="text-slate-700">Usage</span>
