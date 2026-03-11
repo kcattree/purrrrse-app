@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Settings, Plus, X, TrendingDown, DollarSign, Lock, LogOut, Home, List, Menu, Trash2, Mail, Key, ArrowLeft } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -533,45 +533,13 @@ export default function FinanceApp() {
                     setLoginError('Please enter your email'); 
                   } else { 
                     try {
-                      // Send password reset via Resend API
-                      const response = await fetch('https://api.resend.com/emails', {
-                        method: 'POST',
-                        headers: {
-                          'Authorization': 'Bearer re_ZX2ShPEX_9HCWGYAt22y9N1FFSAKNSaHk',
-                          'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                          from: 'Purrrrse <onboarding@resend.dev>',
-                          to: forgotEmail,
-                          subject: 'Reset your Purrrrse password',
-                          html: `
-                            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-                              <h2 style="color: #9b59b6;">Reset Your Purrrrse Password</h2>
-                              <p>Hi there,</p>
-                              <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                              <div style="text-align: center; margin: 30px 0;">
-                                <a href="https://purrrrse-app.vercel.app/?reset=${encodeURIComponent(forgotEmail)}" style="background: linear-gradient(to right, #9b59b6, #f39c12); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">Reset Password</a>
-                              </div>
-                              <p style="color: #999; font-size: 12px;">This link is valid for 1 hour. If you didn't request this, please ignore this email.</p>
-                              <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-                              <p style="color: #999; font-size: 12px; text-align: center;">Dreamt by CatTree 🐱</p>
-                            </div>
-                          `
-                        })
-                      });
-
-                      if (response.ok) {
-                        setLoginError('');
-                        alert('Password reset link sent to ' + forgotEmail + '. Please check your email (including spam folder).');
-                        setShowForgotPassword(false);
-                        setForgotEmail('');
-                      } else {
-                        const error = await response.json();
-                        setLoginError('Failed to send email. Please try again.');
-                      }
+                      await sendPasswordResetEmail(auth, forgotEmail);
+                      setLoginError('');
+                      alert('Password reset email sent to ' + forgotEmail + '. Please check your email to reset your password.');
+                      setShowForgotPassword(false);
+                      setForgotEmail('');
                     } catch (error) {
-                      setLoginError('Error sending email. Please try again later.');
-                      console.error('Resend error:', error);
+                      setLoginError(error.message);
                     }
                   }
                 }} className="w-full bg-gradient-to-r from-purple-600 to-orange-500 text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-all cursor-pointer text-sm">Send Reset Link</button>
