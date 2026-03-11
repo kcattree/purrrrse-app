@@ -321,11 +321,9 @@ export default function FinanceApp() {
         });
         console.log('Settings created in Firebase');
       }
-      alert('Settings saved successfully!');
       setCurrentPage('dashboard');
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Error saving settings: ' + error.message);
     }
   };
 
