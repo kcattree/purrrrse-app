@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, DollarSign, LogOut, Menu, Trash2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Settings, Plus, X, TrendingDown, DollarSign, Lock, LogOut, Home, List, Menu, Trash2, Mail, Key, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -19,6 +19,55 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const styles = {
+  floatingButton: {
+    position: 'fixed',
+    bottom: '32px',
+    right: '32px',
+    width: '64px',
+    height: '64px',
+    background: 'linear-gradient(135deg, #a855f7 0%, #f97316 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '50%',
+    fontSize: '32px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    zIndex: 30
+  },
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '16px',
+    zIndex: 50
+  },
+  modal: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 20px 25px rgba(0,0,0,0.15)',
+    maxWidth: '384px',
+    width: '100%',
+    padding: '24px'
+  },
+  button: {
+    padding: '12px 16px',
+    borderRadius: '8px',
+    border: 'none',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s'
+  }
+};
+
+// eslint-disable-next-line no-unused-vars
 export default function FinanceApp() {
   // Auth State
   const [currentUser, setCurrentUser] = useState(null);
@@ -62,6 +111,16 @@ export default function FinanceApp() {
   const [editingTransactionData, setEditingTransactionData] = useState({});
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteType, setDeleteType] = useState('');
+
+  // Filter State
+  const [filterMode, setFilterMode] = useState('month');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [spendingMonth, setSpendingMonth] = useState(selectedMonth);
+  const [analysisMonth, setAnalysisMonth] = useState(selectedMonth);
+  const [dashboardMonth, setDashboardMonth] = useState(selectedMonth);
 
   // Form State
   const currentDate = new Date();
@@ -72,6 +131,19 @@ export default function FinanceApp() {
     details: '',
     type: 'expense'
   });
+
+  // Settings States
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [verifyPassword, setVerifyPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryBudget, setNewCategoryBudget] = useState('');
+  const [showBankEdit, setShowBankEdit] = useState(false);
+  const [editBankBalance, setEditBankBalance] = useState(bankBalance.toString());
+  const [editMonthlyIncome, setEditMonthlyIncome] = useState(monthlyIncome.toString());
 
   // Auth Effect
   useEffect(() => {
