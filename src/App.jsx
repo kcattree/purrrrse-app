@@ -537,11 +537,11 @@ export default function FinanceApp() {
                       const response = await fetch('https://api.resend.com/emails', {
                         method: 'POST',
                         headers: {
-                          'Authorization': 'Bearer re_8vQzXwbi_LPiKCGdhd6iNk6zw13NbctBn',
+                          'Authorization': 'Bearer re_ZX2ShPEX_9HCWGYAt22y9N1FFSAKNSaHk',
                           'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                          from: 'Purrrrse <noreply@purrrrse.app>',
+                          from: 'Purrrrse <onboarding@resend.dev>',
                           to: forgotEmail,
                           subject: 'Reset your Purrrrse password',
                           html: `
