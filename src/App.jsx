@@ -22,6 +22,7 @@ const db = getFirestore(app);
 export default function FinanceApp() {
   const currentDate = new Date();
   const currentMonth = currentDate.toISOString().split('T')[0].substring(0, 7);
+  const monthYear = currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   const fixedExpenses = ['Housing & Rent', 'Utilities & Bills', 'Assets', 'Loan & Insurance', 'Investment'];
   const variableExpenses = ['Groceries', 'Food Delivery', 'Dining Out', 'Party', 'Transportation', 'Miscellaneous', 'Personal Care & Health', 'Bad Debts & Losses'];
@@ -55,8 +56,14 @@ export default function FinanceApp() {
   const [monthlyIncome, setMonthlyIncome] = useState(26500);
   const [bankBalance, setBankBalance] = useState(115213.24);
   const [bankPageUnlocked, setBankPageUnlocked] = useState(false);
+  const [bankIncomeUnlocked, setBankIncomeUnlocked] = useState(false);
 
   // PIN modals
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinModalAction, setPinModalAction] = useState(null);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [showBankPinModal, setShowBankPinModal] = useState(false);
   const [bankPin, setBankPin] = useState('');
   const [bankPinError, setBankPinError] = useState('');
 
@@ -123,6 +130,7 @@ export default function FinanceApp() {
   const [editingTransactionData, setEditingTransactionData] = useState({});
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteType, setDeleteType] = useState(null);
 
   // Filters
   const [dashboardMonth, setDashboardMonth] = useState(currentMonth);
@@ -131,6 +139,7 @@ export default function FinanceApp() {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [filterMode, setFilterMode] = useState('month');
 
   // Auth effect
   useEffect(() => {
@@ -268,6 +277,7 @@ export default function FinanceApp() {
 
   const handleNavigation = (page) => {
     setBankPageUnlocked(false);
+    setBankIncomeUnlocked(false);
     setCurrentPage(page);
     setShowPageMenu(false);
   };
@@ -432,7 +442,7 @@ export default function FinanceApp() {
           <p className="text-slate-600 mb-6">Are you sure you want to delete this transaction?</p>
           <div className="flex gap-3">
             <button onClick={() => setShowConfirmDelete(false)} className="flex-1 px-4 py-3 border-2 border-slate-300 rounded-lg font-semibold text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Cancel</button>
-            <button onClick={() => { setTransactions(transactions.filter(t => t.id !== deleteTarget)); setShowConfirmDelete(false); setDeleteTarget(null); }} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 cursor-pointer transition-all">Delete</button>
+            <button onClick={() => { setTransactions(transactions.filter(t => t.id !== deleteTarget)); setShowConfirmDelete(false); setDeleteTarget(null); setDeleteType(null); }} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 cursor-pointer transition-all">Delete</button>
           </div>
         </div>
       </div>
@@ -548,17 +558,32 @@ export default function FinanceApp() {
     );
   }
 
-  // SPENDING PAGE
+  // SPENDING PAGE (with refunds showing and pie percentages)
   if (currentPage === 'spending') {
-    const spendingData = Object.fromEntries(
-      categoryOrder.map(cat => {
-        const spent = transactions.filter(t => t.category === cat && t.type !== 'income' && t.date.startsWith(spendingMonth)).reduce((sum, t) => sum + t.amount, 0);
-        return [cat, spent];
-      }).filter(([_, spent]) => spent > 0)
-    );
+    const spendingData = {};
+    transactions.forEach(t => {
+      if (t.date.startsWith(spendingMonth)) {
+        if (!spendingData[t.category]) spendingData[t.category] = 0;
+        if (t.type === 'expense') {
+          spendingData[t.category] += t.amount;
+        } else if (t.type === 'refund') {
+          spendingData[t.category] -= t.amount;
+        }
+      }
+    });
 
-    const pieChartData = Object.entries(spendingData).filter(([_, v]) => v > 0).map(([cat, amount]) => ({ name: cat, value: amount }));
+    const pieChartData = Object.entries(spendingData).filter(([_, v]) => v !== 0).map(([cat, amount]) => ({
+      name: cat,
+      value: Math.abs(amount)
+    }));
+
+    const totalSpending = pieChartData.reduce((sum, item) => sum + item.value, 0);
     const COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#f97316', '#ef4444', '#ec4899', '#a855f7', '#eab308', '#64748b', '#10b981', '#6366f1', '#7c3aed', '#f59e0b', '#e11d48'];
+
+    const pieChartDataWithPercentage = pieChartData.map(item => ({
+      ...item,
+      percentage: ((item.value / totalSpending) * 100).toFixed(1)
+    }));
 
     return (
       <div className="min-h-screen bg-slate-50">
@@ -583,7 +608,7 @@ export default function FinanceApp() {
               {pieChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
-                    <Pie data={pieChartData} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value" label>
+                    <Pie data={pieChartDataWithPercentage} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value" label={({name, percentage}) => `${percentage}%`}>
                       {pieChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                     </Pie>
                     <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
@@ -594,14 +619,32 @@ export default function FinanceApp() {
               )}
             </div>
             <div className="flex-1 space-y-2 overflow-y-auto max-h-80">
-              {Object.entries(spendingData).map(([cat, amount]) => (
-                <div key={cat} className="bg-white border border-slate-200 rounded p-3">
+              {pieChartDataWithPercentage.map((item, idx) => (
+                <div key={item.name} className="bg-white border-l-4 border-slate-200 rounded p-3" style={{borderLeftColor: COLORS[idx % COLORS.length]}}>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-slate-900">{cat}</span>
-                    <span className="text-sm font-bold text-slate-900">${amount.toFixed(2)}</span>
+                    <span className="text-sm font-semibold text-slate-900">{item.name}</span>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-slate-900 block">${item.value.toFixed(2)}</span>
+                      <span className="text-xs text-slate-500">{item.percentage}%</span>
+                    </div>
                   </div>
                 </div>
               ))}
+              {Object.entries(spendingData).filter(([_, v]) => v < 0).length > 0 && (
+                <>
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-xs font-semibold text-slate-600 mb-2">Refunds</p>
+                  </div>
+                  {Object.entries(spendingData).filter(([_, v]) => v < 0).map(([cat, amount]) => (
+                    <div key={cat} className="bg-green-50 border-l-4 border-green-400 rounded p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold text-green-700">↩️ {cat}</span>
+                        <span className="text-sm font-bold text-green-600">+${Math.abs(amount).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -615,7 +658,7 @@ export default function FinanceApp() {
     );
   }
 
-  // ANALYSIS PAGE
+  // ANALYSIS PAGE (Clickable categories with sorting)
   if (currentPage === 'analysis') {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -636,21 +679,22 @@ export default function FinanceApp() {
           </div>
 
           <div className="space-y-2">
-            {categoryOrder.map(cat => {
+            {categoryOrder.map((cat, idx) => {
               const spent = transactions.filter(t => t.category === cat && t.type !== 'income' && t.date.startsWith(analysisMonth)).reduce((sum, t) => sum + t.amount, 0);
               const budget = budgets[cat] || 0;
               const percentage = budget > 0 ? (spent / budget) * 100 : 0;
               if (spent === 0) return null;
 
               return (
-                <div key={cat} className="bg-white border border-slate-200 rounded p-3">
+                <div key={cat} onClick={() => { setSelectedCategory(cat); handleNavigation('category-detail'); }} className="bg-white border border-slate-200 rounded p-3 cursor-pointer hover:shadow-md transition-all">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-semibold text-slate-900">{cat}</span>
                     <span className="text-sm font-bold text-slate-900">${spent.toFixed(2)} / ${budget.toFixed(2)}</span>
                   </div>
-                  <div className="w-full bg-slate-300 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-slate-300 rounded-full h-2 overflow-hidden mb-1">
                     <div style={{ width: `${Math.min(percentage, 100)}%` }} className={`h-full ${percentage > 100 ? 'bg-red-600' : 'bg-green-600'}`} />
                   </div>
+                  <span className="text-xs text-slate-500">{percentage.toFixed(1)}%</span>
                 </div>
               );
             })}
@@ -666,9 +710,71 @@ export default function FinanceApp() {
     );
   }
 
-  // HISTORY PAGE
+  // CATEGORY DETAIL PAGE
+  if (currentPage === 'category-detail') {
+    const categoryTransactions = transactions.filter(t => t.category === selectedCategory && t.type !== 'income').sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <button onClick={() => handleNavigation('analysis')}><ArrowLeft className="w-6 h-6" /></button>
+              <h1 className="text-2xl font-bold text-slate-900">{selectedCategory}</h1>
+            </div>
+            <button onClick={() => setShowPageMenu(!showPageMenu)}><Menu className="w-6 h-6" /></button>
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <p className="text-sm text-slate-600">{categoryTransactions.length} transactions</p>
+        </div>
+
+        <div className="max-w-6xl mx-auto px-6 space-y-0">
+          {categoryTransactions.map(txn => (
+            <div key={txn.id} className="bg-white border-b border-slate-200 px-4 py-3 flex justify-between items-center hover:bg-slate-50 transition-all group">
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-1">
+                  <p className="text-sm font-semibold text-slate-900">{txn.date}</p>
+                  <p className="text-sm font-bold text-slate-900">${txn.amount.toFixed(2)}</p>
+                </div>
+                <p className="text-xs text-slate-600">{txn.details}</p>
+              </div>
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
+                <button onClick={() => { setEditingTransaction(txn.id); setEditingTransactionData(txn); }} className="text-blue-600 hover:text-blue-900"><DollarSign size={16} /></button>
+                <button onClick={() => { setDeleteTarget(txn.id); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-900"><Trash2 size={16} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => setShowAddTransactionModal(true)} className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all cursor-pointer z-30">
+          <Plus className="w-8 h-8" />
+        </button>
+
+        <div className="text-center pb-8 text-xs text-slate-500">Dreamt by CatTree</div>
+      </div>
+    );
+  }
+
+  // HISTORY PAGE (Bank format with date ranges)
   if (currentPage === 'history') {
-    const filteredTxns = transactions.filter(t => t.date.startsWith(selectedMonth || currentMonth)).sort((a, b) => new Date(b.date) - new Date(a.date));
+    let filteredTxns = transactions;
+    
+    if (filterMode === 'month') {
+      filteredTxns = filteredTxns.filter(t => t.date.startsWith(selectedMonth || currentMonth));
+    } else if (filterMode === 'range') {
+      filteredTxns = filteredTxns.filter(t => {
+        const tDate = new Date(t.date);
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+        if (start && tDate < start) return false;
+        if (end && tDate > end) return false;
+        return true;
+      });
+    }
+    
+    filteredTxns = filteredTxns.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     return (
       <div className="min-h-screen bg-slate-50">
@@ -683,27 +789,41 @@ export default function FinanceApp() {
         </div>
 
         <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Select Month</label>
-            <input type="month" value={selectedMonth || currentMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg" />
+          <div className="space-y-3 mb-6">
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Filter by</label>
+              <div className="flex gap-2">
+                <button onClick={() => setFilterMode('month')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${filterMode === 'month' ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-900'}`}>Month</button>
+                <button onClick={() => setFilterMode('range')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${filterMode === 'range' ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-900'}`}>Date Range</button>
+              </div>
+            </div>
+
+            {filterMode === 'month' && (
+              <input type="month" value={selectedMonth || currentMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg" />
+            )}
+
+            {filterMode === 'range' && (
+              <div className="space-y-2">
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} placeholder="From" className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg" />
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} placeholder="To" className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg" />
+              </div>
+            )}
           </div>
 
           <div className="text-sm text-slate-600 mb-4">{filteredTxns.length} transactions</div>
 
-          <div className="space-y-1">
+          <div className="space-y-0">
             {filteredTxns.map(txn => (
-              <div key={txn.id} className={`${txn.type === 'income' ? 'bg-green-50' : 'bg-white'} border border-slate-200 px-4 py-3 flex justify-between items-center hover:bg-slate-50 transition-all group`}>
-                <div className="flex-1">
-                  {txn.type === 'income' ? (
-                    <p className="text-sm font-semibold text-green-700">💰 Income</p>
-                  ) : (
-                    <p className="text-sm font-semibold text-slate-900">{txn.category}</p>
-                  )}
-                  <p className="text-xs text-slate-500">{txn.date}</p>
-                  <p className="text-xs text-slate-600">{txn.details}</p>
+              <div key={txn.id} className={`${txn.type === 'income' ? 'bg-green-50 border-green-100' : 'bg-white border-slate-200'} border-b px-4 py-3 flex justify-between items-center hover:bg-slate-50 transition-all group`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-1 gap-4">
+                    <p className="text-sm font-semibold text-slate-900">{txn.date}</p>
+                    <p className="text-sm font-semibold text-slate-900">{txn.type === 'income' ? '💰 Income' : txn.category}</p>
+                  </div>
+                  <p className="text-xs text-slate-600 truncate">{txn.details}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-sm font-bold ${txn.type === 'income' ? 'text-green-600' : 'text-slate-900'}`}>{txn.type === 'income' ? '+' : ''}${txn.amount.toFixed(2)}</span>
+                <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+                  <span className={`text-sm font-bold whitespace-nowrap ${txn.type === 'income' ? 'text-green-600' : 'text-slate-900'}`}>{txn.type === 'income' ? '+' : ''}${txn.amount.toFixed(2)}</span>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => { setEditingTransaction(txn.id); setEditingTransactionData(txn); }} className="text-blue-600 hover:text-blue-900"><DollarSign size={16} /></button>
                     <button onClick={() => { setDeleteTarget(txn.id); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-900"><Trash2 size={16} /></button>
@@ -757,9 +877,10 @@ export default function FinanceApp() {
       );
     }
 
-    const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const totalExpenses = transactions.filter(t => t.type !== 'income').reduce((sum, t) => sum + t.amount, 0);
-    const currentBalance = bankBalance + totalIncome - totalExpenses;
+    const monthlySpent = transactions.filter(t => t.date.startsWith(dashboardMonth) && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const budgetAllocated = Object.values(budgets).reduce((sum, b) => sum + b, 0);
+    const currentBalance = bankBalance;
+    const usagePercentage = (monthlySpent / budgetAllocated) * 100;
 
     return (
       <div className="min-h-screen bg-slate-50">
@@ -776,43 +897,40 @@ export default function FinanceApp() {
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="grid grid-cols-1 gap-4 mb-8">
             <div className="bg-white rounded-lg p-6 shadow-sm">
+              <p className="text-slate-600 text-sm font-semibold mb-2">Monthly Income</p>
+              <p className="text-3xl font-bold text-blue-600">${monthlyIncome.toFixed(2)}</p>
+            </div>
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <p className="text-slate-600 text-sm font-semibold mb-2">Budget Allocated</p>
+              <p className="text-3xl font-bold text-purple-600">${budgetAllocated.toFixed(2)}</p>
+            </div>
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <p className="text-slate-600 text-sm font-semibold mb-2">Starting Balance</p>
+              <p className="text-3xl font-bold text-slate-900">${currentBalance.toFixed(2)}</p>
+            </div>
+            <div className="bg-white rounded-lg p-6 shadow-sm">
               <p className="text-slate-600 text-sm font-semibold mb-2">Current Balance</p>
-              <p className="text-3xl font-bold text-blue-600">${currentBalance.toFixed(2)}</p>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <p className="text-slate-600 text-sm font-semibold mb-2">Total Income</p>
-              <p className="text-3xl font-bold text-green-600">+${totalIncome.toFixed(2)}</p>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <p className="text-slate-600 text-sm font-semibold mb-2">Total Expenses</p>
-              <p className="text-3xl font-bold text-red-600">-${totalExpenses.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-green-600">${currentBalance.toFixed(2)}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-slate-200">
-            <h2 className="text-sm font-bold text-slate-900 mb-3">Bank & Income</h2>
-            <div className="space-y-2">
-              <button onClick={() => setShowBankIncomeEdit(!showBankIncomeEdit)} className="w-full px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 cursor-pointer font-semibold text-sm flex items-center justify-center gap-1"><Lock className="w-4 h-4" />{showBankIncomeEdit ? 'Hide' : 'Unlock'}</button>
-              {showBankIncomeEdit && (
-                <div className="p-3 bg-slate-50 rounded-lg space-y-2">
-                  <input type="password" value={bankIncomePin} onChange={(e) => setBankIncomePin(e.target.value)} placeholder="Enter PIN to unlock" className="w-full px-2 py-1.5 border border-slate-300 rounded-lg outline-none text-xs" />
-                  {bankIncomeError && <p className="text-red-600 text-xs">{bankIncomeError}</p>}
-                  {bankIncomePin === userPin && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-900 mb-0.5">Monthly Income</label>
-                        <input type="number" value={monthlyIncome} onChange={(e) => setMonthlyIncome(parseFloat(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-xs" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-900 mb-0.5">Starting Balance</label>
-                        <input type="number" value={bankBalance} onChange={(e) => setBankBalance(parseFloat(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-xs" />
-                      </div>
-                      <button onClick={() => { setShowBankIncomeEdit(false); setBankIncomePin(''); setBankIncomeError(''); }} className="w-full px-2 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer font-semibold text-xs">Done</button>
-                    </>
-                  )}
-                  {bankIncomePin && bankIncomePin !== userPin && <p className="text-red-600 text-xs">Incorrect PIN</p>}
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Monthly Summary</h3>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Total Spent</p>
+                <p className="text-2xl font-bold text-red-600">${monthlySpent.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Remaining</p>
+                <p className="text-2xl font-bold text-green-600">${(budgetAllocated - monthlySpent).toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Usage ({usagePercentage.toFixed(1)}%)</p>
+                <div className="w-full bg-slate-300 rounded-full h-3 overflow-hidden">
+                  <div style={{ width: `${Math.min(usagePercentage, 100)}%` }} className={`h-full ${usagePercentage > 100 ? 'bg-red-600' : 'bg-blue-600'}`} />
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
@@ -852,33 +970,6 @@ export default function FinanceApp() {
                 <label className="block text-xs font-semibold text-slate-900 mb-1">Email</label>
                 <input type="text" value={userEmail} disabled className="w-full px-3 py-1.5 border border-slate-300 rounded-lg bg-slate-100 text-xs" />
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-lg border border-slate-200">
-            <h2 className="text-sm font-bold text-slate-900 mb-2">Bank & Income</h2>
-            <div className="space-y-1.5">
-              <button onClick={() => setShowBankIncomeEdit(!showBankIncomeEdit)} className="px-2 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 cursor-pointer font-semibold text-xs"><Lock className="w-3 h-3 inline mr-1" />{showBankIncomeEdit ? 'Hide' : 'Unlock'}</button>
-              {showBankIncomeEdit && (
-                <div className="p-2 bg-slate-50 rounded-lg space-y-1.5">
-                  <input type="password" value={bankIncomePin} onChange={(e) => setBankIncomePin(e.target.value)} placeholder="Enter PIN to unlock" className="w-full px-2 py-1.5 border border-slate-300 rounded-lg outline-none text-xs" />
-                  {bankIncomeError && <p className="text-red-600 text-xs">{bankIncomeError}</p>}
-                  {bankIncomePin === userPin && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-900 mb-0.5">Monthly Income</label>
-                        <input type="number" value={monthlyIncome} onChange={(e) => setMonthlyIncome(parseFloat(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-xs" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-900 mb-0.5">Starting Balance</label>
-                        <input type="number" value={bankBalance} onChange={(e) => setBankBalance(parseFloat(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-xs" />
-                      </div>
-                      <button onClick={() => { setShowBankIncomeEdit(false); setBankIncomePin(''); setBankIncomeError(''); }} className="w-full px-2 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer font-semibold text-xs">Done</button>
-                    </>
-                  )}
-                  {bankIncomePin && bankIncomePin !== userPin && <p className="text-red-600 text-xs">Incorrect PIN</p>}
-                </div>
-              )}
             </div>
           </div>
 
