@@ -863,11 +863,6 @@ export default function FinanceApp() {
                       </div>
                     </div>
                   );
-                          <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 hover:bg-red-50 rounded transition-all">🗑️</button>
-                        </div>
-                      </div>
-                    </div>
-                  );
                 })}
               </div>
             ) : (
