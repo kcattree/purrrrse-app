@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Settings, Plus, X, TrendingDown, DollarSign, Lock, LogOut, Home, List, Menu, Trash2, Mail, Key, ArrowLeft } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -1332,7 +1332,33 @@ export default function FinanceApp() {
                     <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New Password" className="w-full px-2 py-1.5 border border-slate-300 rounded-lg outline-none text-xs" />
                     <input type="password" value={verifyPassword} onChange={(e) => setVerifyPassword(e.target.value)} placeholder="Verify Password" className="w-full px-2 py-1.5 border border-slate-300 rounded-lg outline-none text-xs" />
                     {passwordError && <p className="text-red-600 text-xs">{passwordError}</p>}
-                    <button onClick={() => { if (currentPassword !== userPassword) { setPasswordError('Current password is incorrect'); } else if (newPassword !== verifyPassword) { setPasswordError('Passwords do not match'); } else { setUserPassword(newPassword); setPasswordError(''); setShowPasswordChange(false); setCurrentPassword(''); setNewPassword(''); setVerifyPassword(''); } }} className="w-full px-2 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer font-semibold text-sm">Update Password</button>
+                    <button onClick={async () => { 
+                      if (!currentPassword || !newPassword || !verifyPassword) {
+                        setPasswordError('Please fill all fields');
+                      } else if (newPassword !== verifyPassword) {
+                        setPasswordError('Passwords do not match');
+                      } else if (newPassword.length < 6) {
+                        setPasswordError('Password must be at least 6 characters');
+                      } else {
+                        try {
+                          // Re-authenticate user with current password
+                          const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+                          await reauthenticateWithCredential(currentUser, credential);
+                          
+                          // Update password in Firebase Auth
+                          await updatePassword(currentUser, newPassword);
+                          
+                          setPasswordError('');
+                          alert('Password updated successfully!');
+                          setShowPasswordChange(false);
+                          setCurrentPassword('');
+                          setNewPassword('');
+                          setVerifyPassword('');
+                        } catch (error) {
+                          setPasswordError(error.message || 'Failed to update password');
+                        }
+                      }
+                    }} className="w-full px-2 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer font-semibold text-sm">Update Password</button>
                   </div>
                 )}
               </div>
