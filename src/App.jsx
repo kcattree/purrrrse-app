@@ -213,6 +213,38 @@ export default function FinanceApp() {
     loadSettings();
   }, [currentUser]);
 
+  // Auto-save settings whenever they change (debounced)
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const timer = setTimeout(() => {
+      const saveSettings = async () => {
+        try {
+          const q = query(collection(db, 'userSettings'), where('userId', '==', currentUser.uid));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const docId = snapshot.docs[0].id;
+            await updateDoc(doc(db, 'userSettings', docId), {
+              userName,
+              budgets,
+              categoryOrder,
+              monthlyIncome,
+              bankBalance,
+              userPin,
+              userPassword,
+              userCurrency
+            });
+          }
+        } catch (error) {
+          console.error('Auto-save error:', error);
+        }
+      };
+      saveSettings();
+    }, 1000); // Save 1 second after last change
+
+    return () => clearTimeout(timer);
+  }, [currentUser, userName, budgets, categoryOrder, monthlyIncome, bankBalance, userPin, userPassword, userCurrency]);
+
   const handleNavigation = (page) => {
     setBankPageUnlocked(false);
     setBankIncomeUnlocked(false);
@@ -1375,7 +1407,7 @@ export default function FinanceApp() {
               </div>
             </div>
 
-            <button onClick={() => handleNavigation('dashboard')} className="w-full bg-gradient-to-r from-purple-600 to-orange-500 text-white font-semibold py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer text-sm">Apply Settings</button>
+            <button onClick={handleSaveSettings} className="w-full bg-gradient-to-r from-purple-600 to-orange-500 text-white font-semibold py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer text-sm">Apply Settings</button>
           </div>
         </div>
         <p className="text-center text-slate-400 text-xs py-8">Dreamt by CatTree</p>
