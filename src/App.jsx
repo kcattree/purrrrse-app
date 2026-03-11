@@ -47,14 +47,15 @@ export default function FinanceApp() {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   // User settings
-  const [userEmail, setUserEmail] = useState('kaiserkhatree@gmail.com');
-  const [userName, setUserName] = useState('Kaiser');
+  const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('User');
   const [userPassword, setUserPassword] = useState('admin');
   const [userPin, setUserPin] = useState('1234');
+  const [userCurrency, setUserCurrency] = useState('USD');
 
-  // Bank/Income
-  const [monthlyIncome, setMonthlyIncome] = useState(26500);
-  const [bankBalance, setBankBalance] = useState(115213.24);
+  // Bank/Income - start at 0, will load from Firebase if user has set them
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const [bankBalance, setBankBalance] = useState(0);
   const [bankPageUnlocked, setBankPageUnlocked] = useState(false);
   const [bankIncomeUnlocked, setBankIncomeUnlocked] = useState(false);
 
@@ -185,6 +186,7 @@ export default function FinanceApp() {
         if (settings.bankBalance) setBankBalance(settings.bankBalance);
         if (settings.userPin) setUserPin(settings.userPin);
         if (settings.userPassword) setUserPassword(settings.userPassword);
+        if (settings.userCurrency) setUserCurrency(settings.userCurrency);
       }
     };
     loadSettings();
@@ -274,7 +276,8 @@ export default function FinanceApp() {
           monthlyIncome,
           bankBalance,
           userPin,
-          userPassword
+          userPassword,
+          userCurrency
         });
       } else {
         // Create new settings document if it doesn't exist
@@ -286,7 +289,8 @@ export default function FinanceApp() {
           monthlyIncome,
           bankBalance,
           userPin,
-          userPassword
+          userPassword,
+          userCurrency
         });
       }
       setCurrentPage('dashboard');
@@ -398,10 +402,11 @@ export default function FinanceApp() {
                         userName: 'User',
                         budgets,
                         categoryOrder,
-                        monthlyIncome,
-                        bankBalance,
+                        monthlyIncome: 0,
+                        bankBalance: 0,
                         userPin: '1234',
-                        userPassword: 'admin'
+                        userPassword: 'admin',
+                        userCurrency: 'USD'
                       });
                       setShowSignup(false);
                     } catch (error) {
@@ -559,20 +564,20 @@ export default function FinanceApp() {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-start justify-end p-4 z-50" onClick={() => setShowPageMenu(false)}>
         <div className="bg-white rounded-lg shadow-2xl max-w-xs w-full mt-14" onClick={(e) => e.stopPropagation()}>
-          <div className="flex justify-between items-center p-3 border-b border-slate-200">
-            <h2 className="text-sm font-bold text-slate-900">Navigation</h2>
-            <button onClick={() => setShowPageMenu(false)} className="text-slate-600 hover:text-slate-900 cursor-pointer p-0.5"><X className="w-4 h-4" /></button>
+          <div className="flex justify-between items-center p-4 border-b border-slate-200">
+            <h2 className="text-base font-bold text-slate-900">Navigation</h2>
+            <button onClick={() => setShowPageMenu(false)} className="text-slate-600 hover:text-slate-900 cursor-pointer p-0.5"><X className="w-5 h-5" /></button>
           </div>
-          <div className="p-2 space-y-0.5">
-            <button onClick={() => { handleNavigation('dashboard'); }} className="w-full text-left px-2 py-1.5 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-xs">📊 Dashboard</button>
-            <button onClick={() => { setCurrentPage('spending'); setShowPageMenu(false); }} className="w-full text-left px-2 py-1.5 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-xs">📈 Spending</button>
-            <button onClick={() => { setCurrentPage('analysis'); setShowPageMenu(false); }} className="w-full text-left px-2 py-1.5 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-xs">📉 Analysis</button>
-            <button onClick={() => { setCurrentPage('history'); setShowPageMenu(false); }} className="w-full text-left px-2 py-1.5 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-xs">📋 History</button>
-            <button onClick={() => { if (!bankPageUnlocked) { setShowBankPinModal(true); setShowPageMenu(false); } else { handleNavigation('bank'); } }} className="w-full text-left px-2 py-1.5 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-xs">🏦 Bank</button>
-            <button onClick={() => { setCurrentPage('settings'); setShowPageMenu(false); }} className="w-full text-left px-2 py-1.5 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-xs">⚙️ Settings</button>
-            <button onClick={() => { setShowAddTransactionModal(true); setShowPageMenu(false); }} className="w-full text-left px-2 py-1.5 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-xs">➕ Add Transaction</button>
-            <hr className="my-1" />
-            <button onClick={() => { handleLogout(); setShowPageMenu(false); }} className="w-full text-left px-2 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all font-semibold text-xs">🚪 Logout</button>
+          <div className="p-2.5 space-y-1">
+            <button onClick={() => { handleNavigation('dashboard'); }} className="w-full text-left px-3 py-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-sm">📊 Dashboard</button>
+            <button onClick={() => { setCurrentPage('spending'); setShowPageMenu(false); }} className="w-full text-left px-3 py-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-sm">📈 Spending</button>
+            <button onClick={() => { setCurrentPage('analysis'); setShowPageMenu(false); }} className="w-full text-left px-3 py-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-sm">📉 Analysis</button>
+            <button onClick={() => { setCurrentPage('history'); setShowPageMenu(false); }} className="w-full text-left px-3 py-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-sm">📋 History</button>
+            <button onClick={() => { if (!bankPageUnlocked) { setShowBankPinModal(true); setShowPageMenu(false); } else { handleNavigation('bank'); } }} className="w-full text-left px-3 py-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-sm">🏦 Bank</button>
+            <button onClick={() => { setCurrentPage('settings'); setShowPageMenu(false); }} className="w-full text-left px-3 py-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-sm">⚙️ Settings</button>
+            <button onClick={() => { setShowAddTransactionModal(true); setShowPageMenu(false); }} className="w-full text-left px-3 py-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-semibold text-sm">➕ Add Transaction</button>
+            <hr className="my-1.5" />
+            <button onClick={() => { handleLogout(); setShowPageMenu(false); }} className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-all font-semibold text-sm">🚪 Logout</button>
           </div>
         </div>
       </div>
@@ -841,18 +846,23 @@ export default function FinanceApp() {
                   const dateObj = new Date(t.date);
                   const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                   return (
-                    <div key={t.id} className="px-4 py-2 hover:bg-slate-50 transition-all flex items-center gap-3 text-sm">
-                      <div className="w-20 font-semibold text-slate-700 text-xs">{formattedDate}</div>
-                      <div className="w-32">
+                    <div key={t.id} className="px-3 py-2 hover:bg-slate-50 transition-all flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-3 text-sm">
+                      <div className="font-semibold text-slate-700 text-xs lg:w-20">{formattedDate}</div>
+                      <div className="lg:w-32">
                         <p className={`font-semibold text-xs ${colorClass}`}>{t.category}</p>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-slate-600 truncate">{t.details}</p>
+                        <p className="text-xs text-slate-600">{t.details}</p>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <p className="font-bold text-slate-900 w-16 text-right text-sm">${t.amount.toFixed(2)}</p>
-                        <div className="flex gap-0.5">
+                      <div className="flex items-center gap-2 lg:flex-shrink-0">
+                        <p className="font-bold lg:w-16 lg:text-right text-sm text-slate-900">${t.amount.toFixed(2)}</p>
+                        <div className="flex gap-0.5 hidden lg:flex">
                           <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-0.5 hover:bg-purple-50 rounded transition-all">✏️</button>
+                          <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 hover:bg-red-50 rounded transition-all">🗑️</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
                           <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 hover:bg-red-50 rounded transition-all">🗑️</button>
                         </div>
                       </div>
@@ -1133,7 +1143,7 @@ export default function FinanceApp() {
                     <button onClick={() => handleReorderCategory(idx, 'up')} className="text-purple-600 hover:bg-purple-50 p-0.5 rounded cursor-pointer text-xs" title="Move up">▲</button>
                     <button onClick={() => handleReorderCategory(idx, 'down')} className="text-purple-600 hover:bg-purple-50 p-0.5 rounded cursor-pointer text-xs" title="Move down">▼</button>
                     <span className="flex-1 font-semibold text-slate-900 text-xs">{cat}</span>
-                    <input type="number" value={budgets[cat]} onChange={(e) => setBudgets({...budgets, [cat]: parseFloat(e.target.value)})} className="w-16 px-1.5 py-0.5 border border-slate-300 rounded outline-none text-xs font-semibold" />
+                    <input type="number" value={budgets[cat] || 0} onChange={(e) => setBudgets({...budgets, [cat]: parseFloat(e.target.value) || 0})} className="w-16 px-1.5 py-0.5 border border-slate-300 rounded outline-none text-xs font-semibold" />
                     <button onClick={() => { const newBudgets = {...budgets}; delete newBudgets[cat]; setBudgets(newBudgets); setCategoryOrder(categoryOrder.filter(c => c !== cat)); }} className="text-red-600 hover:text-red-800 cursor-pointer text-xs">🗑️</button>
                   </div>
                 ))}
@@ -1193,6 +1203,61 @@ export default function FinanceApp() {
                 <div>
                   <label className="block text-xs font-semibold text-slate-900 mb-0.5">Email</label>
                   <input type="text" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-900 mb-0.5">Currency</label>
+                  <select value={userCurrency} onChange={(e) => setUserCurrency(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-xs">
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GBP">GBP - British Pound (£)</option>
+                    <option value="AED">AED - UAE Dirham (د.إ)</option>
+                    <option value="INR">INR - Indian Rupee (₹)</option>
+                    <option value="CAD">CAD - Canadian Dollar (C$)</option>
+                    <option value="AUD">AUD - Australian Dollar (A$)</option>
+                    <option value="JPY">JPY - Japanese Yen (¥)</option>
+                    <option value="CHF">CHF - Swiss Franc (CHF)</option>
+                    <option value="CNY">CNY - Chinese Yuan (¥)</option>
+                    <option value="SGD">SGD - Singapore Dollar (S$)</option>
+                    <option value="HKD">HKD - Hong Kong Dollar (HK$)</option>
+                    <option value="NZD">NZD - New Zealand Dollar (NZ$)</option>
+                    <option value="SEK">SEK - Swedish Krona (kr)</option>
+                    <option value="NOK">NOK - Norwegian Krone (kr)</option>
+                    <option value="DKK">DKK - Danish Krone (kr)</option>
+                    <option value="PLN">PLN - Polish Zloty (zł)</option>
+                    <option value="CZK">CZK - Czech Koruna (Kč)</option>
+                    <option value="HUF">HUF - Hungarian Forint (Ft)</option>
+                    <option value="RON">RON - Romanian Leu (lei)</option>
+                    <option value="BGN">BGN - Bulgarian Lev (лв)</option>
+                    <option value="HRK">HRK - Croatian Kuna (kn)</option>
+                    <option value="RUB">RUB - Russian Ruble (₽)</option>
+                    <option value="TRY">TRY - Turkish Lira (₺)</option>
+                    <option value="ZAR">ZAR - South African Rand (R)</option>
+                    <option value="MXN">MXN - Mexican Peso ($)</option>
+                    <option value="BRL">BRL - Brazilian Real (R$)</option>
+                    <option value="ARS">ARS - Argentine Peso ($)</option>
+                    <option value="CLP">CLP - Chilean Peso ($)</option>
+                    <option value="KRW">KRW - South Korean Won (₩)</option>
+                    <option value="THB">THB - Thai Baht (฿)</option>
+                    <option value="MYR">MYR - Malaysian Ringgit (RM)</option>
+                    <option value="PHP">PHP - Philippine Peso (₱)</option>
+                    <option value="IDR">IDR - Indonesian Rupiah (Rp)</option>
+                    <option value="VND">VND - Vietnamese Dong (₫)</option>
+                    <option value="PKR">PKR - Pakistani Rupee (₨)</option>
+                    <option value="BDT">BDT - Bangladeshi Taka (৳)</option>
+                    <option value="LKR">LKR - Sri Lankan Rupee (Rs)</option>
+                    <option value="NGN">NGN - Nigerian Naira (₦)</option>
+                    <option value="GHS">GHS - Ghanaian Cedi (₵)</option>
+                    <option value="KES">KES - Kenyan Shilling (KSh)</option>
+                    <option value="EGP">EGP - Egyptian Pound (E£)</option>
+                    <option value="SAR">SAR - Saudi Riyal (﷼)</option>
+                    <option value="QAR">QAR - Qatari Riyal (QR)</option>
+                    <option value="KWD">KWD - Kuwaiti Dinar (د.ك)</option>
+                    <option value="BHD">BHD - Bahraini Dinar (.د.ب)</option>
+                    <option value="OMR">OMR - Omani Rial (ر.ع.)</option>
+                    <option value="JOD">JOD - Jordanian Dinar (د.ا)</option>
+                    <option value="LBP">LBP - Lebanese Pound (ل.ل)</option>
+                    <option value="ILS">ILS - Israeli Shekel (₪)</option>
+                  </select>
                 </div>
               </div>
             </div>
