@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Settings, Plus, X, TrendingDown, DollarSign, Lock, LogOut, Home, List, Menu, Trash2, Mail, Key, ArrowLeft } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -528,7 +528,21 @@ export default function FinanceApp() {
                   <input type="text" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm" placeholder="abc@cba.com" />
                 </div>
                 {loginError && <p className="text-red-600 text-sm font-medium">{loginError}</p>}
-                <button onClick={() => { if (!forgotEmail) { setLoginError('Please enter your email'); } else { setLoginError(''); alert('Password reset link would be sent to ' + forgotEmail); setShowForgotPassword(false); setForgotEmail(''); } }} className="w-full bg-gradient-to-r from-purple-600 to-orange-500 text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-all cursor-pointer text-sm">Send Reset Link</button>
+                <button onClick={async () => { 
+                  if (!forgotEmail) { 
+                    setLoginError('Please enter your email'); 
+                  } else { 
+                    try {
+                      await sendPasswordResetEmail(auth, forgotEmail);
+                      setLoginError('');
+                      alert('Password reset link sent to ' + forgotEmail + '. Please check your email.');
+                      setShowForgotPassword(false);
+                      setForgotEmail('');
+                    } catch (error) {
+                      setLoginError(error.message);
+                    }
+                  }
+                }} className="w-full bg-gradient-to-r from-purple-600 to-orange-500 text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-all cursor-pointer text-sm">Send Reset Link</button>
                 <button onClick={() => { setShowForgotPassword(false); setLoginError(''); setForgotEmail(''); }} className="w-full text-sm text-slate-600 hover:text-slate-900 font-semibold cursor-pointer">Back to Login</button>
               </div>
             )}
