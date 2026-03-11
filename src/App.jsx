@@ -36,6 +36,7 @@ export default function FinanceApp() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('');
+  const [signupName, setSignupName] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showSignup, setShowSignup] = useState(false);
@@ -180,10 +181,30 @@ export default function FinanceApp() {
       if (!snapshot.empty) {
         const settings = snapshot.docs[0].data();
         if (settings.userName) setUserName(settings.userName);
-        if (settings.budgets) setBudgets(settings.budgets);
+        if (settings.budgets) {
+          // Ensure all category budgets are present, defaulting missing ones to 0
+          const completeBudgets = {
+            'Housing & Rent': 0,
+            'Utilities & Bills': 0,
+            'Groceries': 0,
+            'Food Delivery': 0,
+            'Dining Out': 0,
+            'Party': 0,
+            'Assets': 0,
+            'Transportation': 0,
+            'Miscellaneous': 0,
+            'Personal Care & Health': 0,
+            'Lifestyle & Entertainment': 0,
+            'Loan & Insurance': 0,
+            'Investment': 0,
+            'Bad Debts & Losses': 0,
+            ...settings.budgets
+          };
+          setBudgets(completeBudgets);
+        }
         if (settings.categoryOrder) setCategoryOrder(settings.categoryOrder);
-        if (settings.monthlyIncome) setMonthlyIncome(settings.monthlyIncome);
-        if (settings.bankBalance) setBankBalance(settings.bankBalance);
+        if (settings.monthlyIncome !== undefined) setMonthlyIncome(settings.monthlyIncome);
+        if (settings.bankBalance !== undefined) setBankBalance(settings.bankBalance);
         if (settings.userPin) setUserPin(settings.userPin);
         if (settings.userPassword) setUserPassword(settings.userPassword);
         if (settings.userCurrency) setUserCurrency(settings.userCurrency);
@@ -432,6 +453,10 @@ export default function FinanceApp() {
             ) : showSignup ? (
               <div className="space-y-3">
                 <div>
+                  <label className="block text-sm font-semibold text-slate-900 mb-1">Name</label>
+                  <input type="text" value={signupName} onChange={(e) => setSignupName(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm" placeholder="Your name" />
+                </div>
+                <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-1">Email</label>
                   <input type="text" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm" placeholder="your@email.com" />
                 </div>
@@ -446,18 +471,40 @@ export default function FinanceApp() {
                 {loginError && <p className="text-red-600 text-sm font-medium">{loginError}</p>}
                 <button onClick={async () => { 
                   setLoginError('');
-                  if (!signupEmail || !signupPassword || !signupPasswordConfirm) { 
+                  if (!signupName || !signupEmail || !signupPassword || !signupPasswordConfirm) { 
                     setLoginError('Please fill all fields'); 
                   } else if (signupPassword !== signupPasswordConfirm) { 
                     setLoginError('Passwords do not match'); 
                   } else {
                     try {
                       const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
+                      // Create initial empty budgets (all 0)
+                      const initialBudgets = {
+                        'Housing & Rent': 0,
+                        'Utilities & Bills': 0,
+                        'Groceries': 0,
+                        'Food Delivery': 0,
+                        'Dining Out': 0,
+                        'Party': 0,
+                        'Assets': 0,
+                        'Transportation': 0,
+                        'Miscellaneous': 0,
+                        'Personal Care & Health': 0,
+                        'Lifestyle & Entertainment': 0,
+                        'Loan & Insurance': 0,
+                        'Investment': 0,
+                        'Bad Debts & Losses': 0,
+                      };
+                      const initialCategories = [
+                        'Housing & Rent', 'Utilities & Bills', 'Groceries', 'Food Delivery',
+                        'Dining Out', 'Party', 'Assets', 'Transportation', 'Miscellaneous',
+                        'Personal Care & Health', 'Lifestyle & Entertainment', 'Loan & Insurance', 'Investment', 'Bad Debts & Losses'
+                      ];
                       await addDoc(collection(db, 'userSettings'), {
                         userId: userCredential.user.uid,
-                        userName: 'User',
-                        budgets,
-                        categoryOrder,
+                        userName: signupName,
+                        budgets: initialBudgets,
+                        categoryOrder: initialCategories,
                         monthlyIncome: 0,
                         bankBalance: 0,
                         userPin: '1234',
@@ -465,12 +512,13 @@ export default function FinanceApp() {
                         userCurrency: 'USD'
                       });
                       setShowSignup(false);
+                      setSignupName('');
                     } catch (error) {
                       setLoginError(error.message);
                     }
                   }
                 }} className="w-full bg-gradient-to-r from-purple-600 to-orange-500 text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-all cursor-pointer text-sm">Create Account</button>
-                <button onClick={() => { setShowSignup(false); setLoginError(''); setSignupEmail(''); setSignupPassword(''); setSignupPasswordConfirm(''); }} className="w-full text-sm text-slate-600 hover:text-slate-900 font-semibold cursor-pointer">Back to Login</button>
+                <button onClick={() => { setShowSignup(false); setLoginError(''); setSignupName(''); setSignupEmail(''); setSignupPassword(''); setSignupPasswordConfirm(''); }} className="w-full text-sm text-slate-600 hover:text-slate-900 font-semibold cursor-pointer">Back to Login</button>
               </div>
             ) : (
               <div className="space-y-3">
