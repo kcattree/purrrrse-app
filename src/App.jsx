@@ -176,74 +176,51 @@ export default function FinanceApp() {
   useEffect(() => {
     if (!currentUser) return;
     const loadSettings = async () => {
-      const q = query(collection(db, 'userSettings'), where('userId', '==', currentUser.uid));
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        const settings = snapshot.docs[0].data();
-        if (settings.userName) setUserName(settings.userName);
-        if (settings.budgets) {
-          // Ensure all category budgets are present, defaulting missing ones to 0
-          const completeBudgets = {
-            'Housing & Rent': 0,
-            'Utilities & Bills': 0,
-            'Groceries': 0,
-            'Food Delivery': 0,
-            'Dining Out': 0,
-            'Party': 0,
-            'Assets': 0,
-            'Transportation': 0,
-            'Miscellaneous': 0,
-            'Personal Care & Health': 0,
-            'Lifestyle & Entertainment': 0,
-            'Loan & Insurance': 0,
-            'Investment': 0,
-            'Bad Debts & Losses': 0,
-            ...settings.budgets
-          };
-          setBudgets(completeBudgets);
+      try {
+        const q = query(collection(db, 'userSettings'), where('userId', '==', currentUser.uid));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const settings = snapshot.docs[0].data();
+          console.log('Loaded settings from Firebase:', settings);
+          if (settings.userName) setUserName(settings.userName);
+          if (settings.budgets) {
+            // Ensure all category budgets are present, defaulting missing ones to 0
+            const completeBudgets = {
+              'Housing & Rent': 0,
+              'Utilities & Bills': 0,
+              'Groceries': 0,
+              'Food Delivery': 0,
+              'Dining Out': 0,
+              'Party': 0,
+              'Assets': 0,
+              'Transportation': 0,
+              'Miscellaneous': 0,
+              'Personal Care & Health': 0,
+              'Lifestyle & Entertainment': 0,
+              'Loan & Insurance': 0,
+              'Investment': 0,
+              'Bad Debts & Losses': 0,
+              ...settings.budgets
+            };
+            setBudgets(completeBudgets);
+          }
+          if (settings.categoryOrder) setCategoryOrder(settings.categoryOrder);
+          if (settings.monthlyIncome !== undefined) setMonthlyIncome(settings.monthlyIncome);
+          if (settings.bankBalance !== undefined) setBankBalance(settings.bankBalance);
+          if (settings.userPin) setUserPin(settings.userPin);
+          if (settings.userPassword) setUserPassword(settings.userPassword);
+          if (settings.userCurrency) setUserCurrency(settings.userCurrency);
+        } else {
+          console.log('No settings found in Firebase for this user');
         }
-        if (settings.categoryOrder) setCategoryOrder(settings.categoryOrder);
-        if (settings.monthlyIncome !== undefined) setMonthlyIncome(settings.monthlyIncome);
-        if (settings.bankBalance !== undefined) setBankBalance(settings.bankBalance);
-        if (settings.userPin) setUserPin(settings.userPin);
-        if (settings.userPassword) setUserPassword(settings.userPassword);
-        if (settings.userCurrency) setUserCurrency(settings.userCurrency);
+      } catch (error) {
+        console.error('Error loading settings:', error);
       }
     };
     loadSettings();
   }, [currentUser]);
 
-  // Auto-save settings whenever they change (debounced)
-  useEffect(() => {
-    if (!currentUser) return;
-    
-    const timer = setTimeout(() => {
-      const saveSettings = async () => {
-        try {
-          const q = query(collection(db, 'userSettings'), where('userId', '==', currentUser.uid));
-          const snapshot = await getDocs(q);
-          if (!snapshot.empty) {
-            const docId = snapshot.docs[0].id;
-            await updateDoc(doc(db, 'userSettings', docId), {
-              userName,
-              budgets,
-              categoryOrder,
-              monthlyIncome,
-              bankBalance,
-              userPin,
-              userPassword,
-              userCurrency
-            });
-          }
-        } catch (error) {
-          console.error('Auto-save error:', error);
-        }
-      };
-      saveSettings();
-    }, 1000); // Save 1 second after last change
-
-    return () => clearTimeout(timer);
-  }, [currentUser, userName, budgets, categoryOrder, monthlyIncome, bankBalance, userPin, userPassword, userCurrency]);
+  // Don't auto-save - only save when user clicks "Apply Settings"
 
   const handleNavigation = (page) => {
     setBankPageUnlocked(false);
@@ -320,35 +297,35 @@ export default function FinanceApp() {
     try {
       const q = query(collection(db, 'userSettings'), where('userId', '==', currentUser.uid));
       const snapshot = await getDocs(q);
+      const dataToSave = {
+        userName,
+        budgets,
+        categoryOrder,
+        monthlyIncome,
+        bankBalance,
+        userPin,
+        userPassword,
+        userCurrency
+      };
+      console.log('Saving settings to Firebase:', dataToSave);
+      
       if (!snapshot.empty) {
         const docId = snapshot.docs[0].id;
-        await updateDoc(doc(db, 'userSettings', docId), {
-          userName,
-          budgets,
-          categoryOrder,
-          monthlyIncome,
-          bankBalance,
-          userPin,
-          userPassword,
-          userCurrency
-        });
+        await updateDoc(doc(db, 'userSettings', docId), dataToSave);
+        console.log('Settings updated in Firebase');
       } else {
         // Create new settings document if it doesn't exist
         await addDoc(collection(db, 'userSettings'), {
           userId: currentUser.uid,
-          userName,
-          budgets,
-          categoryOrder,
-          monthlyIncome,
-          bankBalance,
-          userPin,
-          userPassword,
-          userCurrency
+          ...dataToSave
         });
+        console.log('Settings created in Firebase');
       }
+      alert('Settings saved successfully!');
       setCurrentPage('dashboard');
     } catch (error) {
       console.error('Error saving settings:', error);
+      alert('Error saving settings: ' + error.message);
     }
   };
 
