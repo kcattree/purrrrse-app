@@ -971,11 +971,14 @@ export default function FinanceApp() {
 
   // BANK
   if (currentPage === 'bank') {
-    // Calculate total income and expenses
-    const bankTransactions = transactions;
-    const totalIncome = bankTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const totalExpenses = bankTransactions.filter(t => t.type !== 'income').reduce((sum, t) => sum + t.amount, 0);
-    const currentBalance = bankBalance + totalIncome - totalExpenses;
+    // Calculate monthly income, expenses, and starting balance
+    const monthlyTransactions = transactions.filter(t => t.date.startsWith(dashboardMonth));
+    const monthlyIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const monthlyExpenses = monthlyTransactions.filter(t => t.type !== 'income').reduce((sum, t) => sum + t.amount, 0);
+    
+    // Calculate starting balance (balance at start of month = current balance - (this month's income - this month's expenses))
+    const monthStartingBalance = bankBalance - (monthlyIncome - monthlyExpenses);
+    const monthCurrentBalance = monthStartingBalance + monthlyIncome - monthlyExpenses;
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -1008,7 +1011,7 @@ export default function FinanceApp() {
                 </div>
                 <div className="text-3xl">📊</div>
               </div>
-              <p className="text-xs text-purple-600">{((dashboardBudgetTotal / monthlyIncome) * 100).toFixed(0)}% of income</p>
+              <p className="text-xs text-purple-600">{monthlyIncome > 0 ? ((dashboardBudgetTotal / monthlyIncome) * 100).toFixed(0) : '0'}% of income</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1016,7 +1019,7 @@ export default function FinanceApp() {
                 <div className="flex justify-between items-center mb-1">
                   <div>
                     <p className="text-orange-700 text-xs font-semibold mb-0.5">Starting Balance</p>
-                    <p className="text-2xl font-bold text-orange-900">${bankBalance.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-orange-900">${monthStartingBalance.toFixed(2)}</p>
                   </div>
                   <div className="text-2xl">📈</div>
                 </div>
@@ -1026,7 +1029,7 @@ export default function FinanceApp() {
                 <div className="flex justify-between items-center mb-1">
                   <div>
                     <p className="text-green-700 text-xs font-semibold mb-0.5">Current Balance</p>
-                    <p className="text-2xl font-bold text-green-900">${currentBalance.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-green-900">${monthCurrentBalance.toFixed(2)}</p>
                   </div>
                   <div className="text-2xl">💳</div>
                 </div>
@@ -1037,16 +1040,24 @@ export default function FinanceApp() {
               <p className="text-slate-600 text-xs mb-3 font-semibold">Monthly Summary</p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-700">Total Spent</span>
-                  <span className="font-bold text-slate-900">${dashboardStats.total.toFixed(2)}</span>
+                  <span className="text-slate-700">Total Income</span>
+                  <span className="font-bold text-green-600">+${monthlyIncome.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-700">Remaining</span>
-                  <span className={`font-bold ${dashboardStats.total <= dashboardBudgetTotal ? 'text-green-600' : 'text-red-600'}`}>${(dashboardBudgetTotal - dashboardStats.total).toFixed(2)}</span>
+                  <span className="text-slate-700">Total Spent</span>
+                  <span className="font-bold text-red-600">-${monthlyExpenses.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-700">Remaining Budget</span>
+                  <span className={`font-bold ${(dashboardBudgetTotal - monthlyExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>${(dashboardBudgetTotal - monthlyExpenses).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-700">Balance Change</span>
+                  <span className={`font-bold ${(monthlyIncome - monthlyExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{(monthlyIncome - monthlyExpenses) >= 0 ? '+' : ''}${(monthlyIncome - monthlyExpenses).toFixed(2)}</span>
                 </div>
                 <div className="pt-2 border-t border-slate-200 flex justify-between font-semibold">
                   <span className="text-slate-700">Usage</span>
-                  <span className="text-slate-900">{((dashboardStats.total / dashboardBudgetTotal) * 100).toFixed(0)}%</span>
+                  <span className="text-slate-900">{dashboardBudgetTotal > 0 ? ((monthlyExpenses / dashboardBudgetTotal) * 100).toFixed(0) : '0'}%</span>
                 </div>
               </div>
             </div>
@@ -1086,33 +1097,6 @@ export default function FinanceApp() {
         </div>
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="space-y-3">
-            <div className="bg-white p-3 rounded-lg border border-slate-200">
-              <h2 className="text-sm font-bold text-slate-900 mb-2">Bank & Income</h2>
-              <div className="space-y-1.5">
-                <button onClick={() => setShowBankIncomeEdit(!showBankIncomeEdit)} className="px-2 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 cursor-pointer font-semibold text-xs"><Lock className="w-3 h-3 inline mr-1" />{showBankIncomeEdit ? 'Hide' : 'Unlock'}</button>
-                {showBankIncomeEdit && (
-                  <div className="p-2 bg-slate-50 rounded-lg space-y-1.5">
-                    <input type="password" value={bankIncomePin} onChange={(e) => setBankIncomePin(e.target.value)} placeholder="Enter PIN to unlock" className="w-full px-2 py-1.5 border border-slate-300 rounded-lg outline-none text-xs" />
-                    {bankIncomeError && <p className="text-red-600 text-xs">{bankIncomeError}</p>}
-                    {bankIncomePin === userPin && (
-                      <>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-900 mb-0.5">Monthly Income</label>
-                          <input type="number" value={monthlyIncome} onChange={(e) => setMonthlyIncome(parseFloat(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-900 mb-0.5">Starting Balance</label>
-                          <input type="number" value={bankBalance} onChange={(e) => setBankBalance(parseFloat(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-xs" />
-                        </div>
-                        <button onClick={() => { setShowBankIncomeEdit(false); setBankIncomePin(''); setBankIncomeError(''); }} className="w-full px-2 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer font-semibold text-xs">Done</button>
-                      </>
-                    )}
-                    {bankIncomePin && bankIncomePin !== userPin && <p className="text-red-600 text-xs">Incorrect PIN</p>}
-                  </div>
-                )}
-              </div>
-            </div>
-
             <div className="bg-white p-3 rounded-lg border border-slate-200">
               <h2 className="text-sm font-bold text-slate-900 mb-2">Category Budgets</h2>
               <div className="space-y-0.5 max-h-40 overflow-y-auto mb-2">
