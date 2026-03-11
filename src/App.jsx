@@ -93,20 +93,20 @@ export default function FinanceApp() {
 
   // Categories and budgets
   const [budgets, setBudgets] = useState({
-    'Housing & Rent': 1740,
-    'Utilities & Bills': 160,
-    'Groceries': 500,
-    'Food Delivery': 400,
-    'Dining Out': 600,
-    'Party': 500,
-    'Assets': 1000,
-    'Transportation': 600,
-    'Miscellaneous': 500,
-    'Personal Care & Health': 300,
-    'Lifestyle & Entertainment': 400,
-    'Loan & Insurance': 500,
-    'Investment': 800,
-    'Bad Debts & Losses': 200,
+    'Housing & Rent': 0,
+    'Utilities & Bills': 0,
+    'Groceries': 0,
+    'Food Delivery': 0,
+    'Dining Out': 0,
+    'Party': 0,
+    'Assets': 0,
+    'Transportation': 0,
+    'Miscellaneous': 0,
+    'Personal Care & Health': 0,
+    'Lifestyle & Entertainment': 0,
+    'Loan & Insurance': 0,
+    'Investment': 0,
+    'Bad Debts & Losses': 0,
   });
 
   const [categoryOrder, setCategoryOrder] = useState([
@@ -115,7 +115,7 @@ export default function FinanceApp() {
     'Personal Care & Health', 'Lifestyle & Entertainment', 'Loan & Insurance', 'Investment', 'Bad Debts & Losses'
   ]);
 
-  // Transactions
+  // Transactions - starts empty, loaded from Firebase
   const [transactions, setTransactions] = useState([]);
   const [formData, setFormData] = useState({
     date: currentDate.toISOString().split('T')[0],
@@ -268,6 +268,18 @@ export default function FinanceApp() {
       if (!snapshot.empty) {
         const docId = snapshot.docs[0].id;
         await updateDoc(doc(db, 'userSettings', docId), {
+          userName,
+          budgets,
+          categoryOrder,
+          monthlyIncome,
+          bankBalance,
+          userPin,
+          userPassword
+        });
+      } else {
+        // Create new settings document if it doesn't exist
+        await addDoc(collection(db, 'userSettings'), {
+          userId: currentUser.uid,
           userName,
           budgets,
           categoryOrder,
@@ -971,14 +983,30 @@ export default function FinanceApp() {
 
   // BANK
   if (currentPage === 'bank') {
-    // Calculate monthly income, expenses, and starting balance
-    const monthlyTransactions = transactions.filter(t => t.date.startsWith(dashboardMonth));
+    // Get all months with transactions
+    const allMonths = [...new Set(transactions.map(t => t.date.substring(0, 7)))].sort();
+    
+    // Find current month and previous month
+    const currentMonthStr = dashboardMonth;
+    const currentMonthIndex = allMonths.indexOf(currentMonthStr);
+    const previousMonth = currentMonthIndex > 0 ? allMonths[currentMonthIndex - 1] : null;
+    
+    // Calculate previous month's ending balance
+    let startingBalanceForCurrentMonth = 0;
+    if (previousMonth) {
+      const prevMonthTransactions = transactions.filter(t => t.date.startsWith(previousMonth));
+      const prevIncome = prevMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const prevExpenses = prevMonthTransactions.filter(t => t.type !== 'income').reduce((sum, t) => sum + t.amount, 0);
+      startingBalanceForCurrentMonth = prevIncome - prevExpenses; // Previous month's balance becomes this month's starting
+    }
+    
+    // Calculate current month's income and expenses
+    const monthlyTransactions = transactions.filter(t => t.date.startsWith(currentMonthStr));
     const monthlyIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const monthlyExpenses = monthlyTransactions.filter(t => t.type !== 'income').reduce((sum, t) => sum + t.amount, 0);
     
-    // Calculate starting balance (balance at start of month = current balance - (this month's income - this month's expenses))
-    const monthStartingBalance = bankBalance - (monthlyIncome - monthlyExpenses);
-    const monthCurrentBalance = monthStartingBalance + monthlyIncome - monthlyExpenses;
+    // Current balance = starting balance + this month's income - this month's expenses
+    const monthCurrentBalance = startingBalanceForCurrentMonth + monthlyIncome - monthlyExpenses;
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -1019,7 +1047,7 @@ export default function FinanceApp() {
                 <div className="flex justify-between items-center mb-1">
                   <div>
                     <p className="text-orange-700 text-xs font-semibold mb-0.5">Starting Balance</p>
-                    <p className="text-2xl font-bold text-orange-900">${monthStartingBalance.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-orange-900">${startingBalanceForCurrentMonth.toFixed(2)}</p>
                   </div>
                   <div className="text-2xl">📈</div>
                 </div>
