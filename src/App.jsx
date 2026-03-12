@@ -247,23 +247,30 @@ export default function FinanceApp() {
     const query = searchQuery.toLowerCase().trim();
     
     return txns.filter(t => {
-      switch (searchType) {
-        case 'details':
-          return t.details.toLowerCase().includes(query);
-        case 'category':
-          return t.category.toLowerCase().includes(query);
-        case 'amount':
-          return t.amount.toString().includes(query);
-        case 'date':
-          return t.date.includes(query);
-        case 'all':
-        default:
-          return (
-            t.details.toLowerCase().includes(query) ||
-            t.category.toLowerCase().includes(query) ||
-            t.amount.toString().includes(query) ||
-            t.date.includes(query)
-          );
+      try {
+        if (!t) return false;
+        
+        switch (searchType) {
+          case 'details':
+            return (t.details || '').toLowerCase().includes(query);
+          case 'category':
+            return (t.category || '').toLowerCase().includes(query);
+          case 'amount':
+            return (t.amount || 0).toString().includes(query);
+          case 'date':
+            return (t.date || '').includes(query);
+          case 'all':
+          default:
+            return (
+              (t.details || '').toLowerCase().includes(query) ||
+              (t.category || '').toLowerCase().includes(query) ||
+              (t.amount || 0).toString().includes(query) ||
+              (t.date || '').includes(query)
+            );
+        }
+      } catch (e) {
+        console.error('Error filtering transaction:', t, e);
+        return false;
       }
     });
   };
@@ -315,12 +322,20 @@ export default function FinanceApp() {
   // Check budget alerts - returns data only if should show
   const getBudgetAlertData = () => {
     try {
+      // Debug logging
+      console.log('getBudgetAlertData called');
+      console.log('budgetAlertShownThisSession:', budgetAlertShownThisSession);
+      
       if (budgetAlertShownThisSession) {
+        console.log('Alert already shown this session, returning null');
         return null; // Don't show again this session
       }
 
       const currentMonthStr = dashboardMonth;
-      if (!currentMonthStr) return null;
+      if (!currentMonthStr) {
+        console.log('No current month, returning null');
+        return null;
+      }
       
       const monthlyTransactions = transactions.filter(t => {
         try {
@@ -340,9 +355,15 @@ export default function FinanceApp() {
         return sum + budget;
       }, 0);
       
-      if (totalBudget === 0 || !totalBudget) return null;
+      console.log('Total spent:', totalSpent, 'Total budget:', totalBudget);
+      
+      if (totalBudget === 0 || !totalBudget) {
+        console.log('No budget set, returning null');
+        return null;
+      }
       
       const percentageSpent = (totalSpent / totalBudget) * 100;
+      console.log('Percentage spent:', percentageSpent);
       
       if (percentageSpent >= 80) {
         const categorySpending = {};
@@ -356,8 +377,12 @@ export default function FinanceApp() {
           .sort(([, a], [, b]) => (b || 0) - (a || 0))
           .slice(0, 3);
         
-        if (topCategories.length === 0) return null;
+        if (topCategories.length === 0) {
+          console.log('No top categories, returning null');
+          return null;
+        }
         
+        console.log('Alert conditions met, returning data');
         return {
           percentageSpent: Math.min(Math.round(percentageSpent), 100),
           totalSpent: isFinite(totalSpent) ? totalSpent : 0,
@@ -367,6 +392,7 @@ export default function FinanceApp() {
         };
       }
       
+      console.log('Not at 80% threshold, returning null');
       return null;
     } catch (error) {
       console.error('Error calculating budget alert:', error);
