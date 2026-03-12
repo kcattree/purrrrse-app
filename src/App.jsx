@@ -1228,20 +1228,20 @@ export default function FinanceApp() {
                   const dateObj = new Date(t.date);
                   const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                   return (
-                    <div key={t.id} className="px-4 py-3 hover:bg-slate-50 transition-all flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 text-sm">
-                      {/* Desktop: row layout, Mobile: column layout */}
-                      <div className="font-semibold text-slate-700 text-xs lg:w-24 flex-shrink-0">{formattedDate}</div>
-                      <div className="lg:w-40 flex-shrink-0">
+                    <div key={t.id} className="px-3 py-2 lg:px-4 lg:py-3 hover:bg-slate-50 transition-all flex items-center gap-2 lg:gap-4 text-sm">
+                      {/* Compact on mobile, spacious on desktop */}
+                      <div className="font-semibold text-slate-700 text-xs lg:w-24 flex-shrink-0 w-16">{formattedDate}</div>
+                      <div className="w-20 lg:w-40 flex-shrink-0">
                         <p className={`font-semibold text-xs lg:text-sm ${colorClass}`}>{t.category}</p>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs lg:text-sm text-slate-600">{t.details}</p>
+                        <p className="text-xs lg:text-sm text-slate-600 truncate lg:truncate-none">{t.details}</p>
                       </div>
-                      <div className="flex items-center gap-3 lg:flex-shrink-0">
-                        <p className="font-bold lg:w-20 lg:text-right text-xs lg:text-sm text-slate-900">{getCurrencySymbol(userCurrency)}{t.amount.toFixed(2)}</p>
+                      <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
+                        <p className="font-bold text-xs lg:text-sm lg:w-20 lg:text-right w-14 text-right text-slate-900">{getCurrencySymbol(userCurrency)}{t.amount.toFixed(2)}</p>
                         <div className="flex gap-1">
-                          <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-1 hover:bg-purple-50 rounded transition-all">✏️</button>
-                          <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-1 hover:bg-red-50 rounded transition-all">🗑️</button>
+                          <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-0.5 lg:p-1 hover:bg-purple-50 rounded transition-all">✏️</button>
+                          <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 lg:p-1 hover:bg-red-50 rounded transition-all">🗑️</button>
                         </div>
                       </div>
                     </div>
@@ -1379,20 +1379,20 @@ export default function FinanceApp() {
                   const dateObj = new Date(t.date);
                   const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                   return (
-                    <div key={t.id} className="px-4 py-3 hover:bg-slate-50 transition-all flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 text-sm">
-                      {/* Desktop: row layout, Mobile: column layout */}
-                      <div className="font-semibold text-slate-700 text-xs lg:w-24 flex-shrink-0">{formattedDate}</div>
-                      <div className="lg:w-40 flex-shrink-0">
+                    <div key={t.id} className="px-3 py-2 lg:px-4 lg:py-3 hover:bg-slate-50 transition-all flex items-center gap-2 lg:gap-4 text-sm">
+                      {/* Compact on mobile, spacious on desktop */}
+                      <div className="font-semibold text-slate-700 text-xs lg:w-24 flex-shrink-0 w-16">{formattedDate}</div>
+                      <div className="w-20 lg:w-40 flex-shrink-0">
                         <p className={`font-semibold text-xs lg:text-sm ${isIncome ? 'text-green-600' : colorClass}`}>{isIncome ? '💰 Income' : t.category}</p>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs lg:text-sm text-slate-600">{t.details}</p>
+                        <p className="text-xs lg:text-sm text-slate-600 truncate lg:truncate-none">{t.details}</p>
                       </div>
-                      <div className="flex items-center gap-3 lg:flex-shrink-0">
-                        <p className={`font-bold lg:w-20 lg:text-right text-xs lg:text-sm ${isIncome ? 'text-green-600' : 'text-slate-900'}`}>{getCurrencySymbol(userCurrency)}{isIncome ? '+' : ''}{t.amount.toFixed(2)}</p>
+                      <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
+                        <p className={`font-bold text-xs lg:text-sm lg:w-20 lg:text-right w-14 text-right ${isIncome ? 'text-green-600' : 'text-slate-900'}`}>{getCurrencySymbol(userCurrency)}{isIncome ? '+' : ''}{t.amount.toFixed(2)}</p>
                         <div className="flex gap-1">
-                          <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-1 hover:bg-purple-50 rounded transition-all">✏️</button>
-                          <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-1 hover:bg-red-50 rounded transition-all">🗑️</button>
+                          <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-0.5 lg:p-1 hover:bg-purple-50 rounded transition-all">✏️</button>
+                          <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 lg:p-1 hover:bg-red-50 rounded transition-all">🗑️</button>
                         </div>
                       </div>
                     </div>
