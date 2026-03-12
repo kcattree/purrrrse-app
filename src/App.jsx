@@ -311,35 +311,60 @@ export default function FinanceApp() {
 
   // Check budget alerts
   const getBudgetAlertData = () => {
-    const currentMonthStr = dashboardMonth;
-    const monthlyTransactions = transactions.filter(t => t.date.startsWith(currentMonthStr) && t.type !== 'income');
-    const totalSpent = monthlyTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const totalBudget = Object.values(budgets).reduce((sum, b) => sum + b, 0);
-    
-    if (totalBudget === 0) return null;
-    
-    const percentageSpent = (totalSpent / totalBudget) * 100;
-    
-    if (percentageSpent >= 80) {
-      const categorySpending = {};
-      monthlyTransactions.forEach(t => {
-        categorySpending[t.category] = (categorySpending[t.category] || 0) + t.amount;
+    try {
+      const currentMonthStr = dashboardMonth;
+      if (!currentMonthStr) return null;
+      
+      const monthlyTransactions = transactions.filter(t => {
+        try {
+          return t && t.date && t.date.startsWith(currentMonthStr) && t.type !== 'income';
+        } catch (e) {
+          return false;
+        }
       });
       
-      const topCategories = Object.entries(categorySpending)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 3);
+      const totalSpent = monthlyTransactions.reduce((sum, t) => {
+        const amount = parseFloat(t.amount) || 0;
+        return sum + amount;
+      }, 0);
       
-      return {
-        percentageSpent: Math.round(percentageSpent),
-        totalSpent,
-        totalBudget,
-        remaining: totalBudget - totalSpent,
-        topCategories
-      };
+      const totalBudget = Object.values(budgets || {}).reduce((sum, b) => {
+        const budget = parseFloat(b) || 0;
+        return sum + budget;
+      }, 0);
+      
+      if (totalBudget === 0 || !totalBudget) return null;
+      
+      const percentageSpent = (totalSpent / totalBudget) * 100;
+      
+      if (percentageSpent >= 80) {
+        const categorySpending = {};
+        monthlyTransactions.forEach(t => {
+          if (t.category) {
+            categorySpending[t.category] = (categorySpending[t.category] || 0) + (parseFloat(t.amount) || 0);
+          }
+        });
+        
+        const topCategories = Object.entries(categorySpending)
+          .sort(([, a], [, b]) => (b || 0) - (a || 0))
+          .slice(0, 3);
+        
+        if (topCategories.length === 0) return null;
+        
+        return {
+          percentageSpent: Math.min(Math.round(percentageSpent), 100),
+          totalSpent: isFinite(totalSpent) ? totalSpent : 0,
+          totalBudget: isFinite(totalBudget) ? totalBudget : 0,
+          remaining: isFinite(totalBudget - totalSpent) ? (totalBudget - totalSpent) : 0,
+          topCategories
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error calculating budget alert:', error);
+      return null;
     }
-    
-    return null;
   };
 
   const handleLogout = async () => {
@@ -828,8 +853,12 @@ export default function FinanceApp() {
 
   // DASHBOARD
   if (currentPage === 'dashboard') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    try {
+      const budgetAlertData = getBudgetAlertData();
+      const showAlert = budgetAlertData && !showBudgetAlert === false; // Show alert unless dismissed
+      
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
           <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -876,7 +905,7 @@ export default function FinanceApp() {
         <p className="text-center text-slate-400 text-xs py-8">Dreamt by CatTree</p>
 
         {/* Budget Alert Popup */}
-        {getBudgetAlertData() && (
+        {budgetAlertData && showAlert && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full overflow-hidden">
               <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
@@ -884,9 +913,9 @@ export default function FinanceApp() {
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <p className="text-slate-600 text-sm mb-2">You've spent {getBudgetAlertData().percentageSpent}% of your monthly budget</p>
+                  <p className="text-slate-600 text-sm mb-2">You've spent {budgetAlertData.percentageSpent}% of your monthly budget</p>
                   <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full" style={{width: `${Math.min(getBudgetAlertData().percentageSpent, 100)}%`}}></div>
+                    <div className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full" style={{width: `${Math.min(budgetAlertData.percentageSpent, 100)}%`}}></div>
                   </div>
                 </div>
                 
@@ -895,15 +924,15 @@ export default function FinanceApp() {
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between text-slate-700">
                       <span>Total Spent:</span>
-                      <span className="font-semibold text-red-600">{getCurrencySymbol(userCurrency)}{getBudgetAlertData().totalSpent.toFixed(2)}</span>
+                      <span className="font-semibold text-red-600">{getCurrencySymbol(userCurrency)}{budgetAlertData.totalSpent.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-slate-700">
                       <span>Budget:</span>
-                      <span className="font-semibold">{getCurrencySymbol(userCurrency)}{getBudgetAlertData().totalBudget.toFixed(2)}</span>
+                      <span className="font-semibold">{getCurrencySymbol(userCurrency)}{budgetAlertData.totalBudget.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-slate-700">
                       <span>Remaining:</span>
-                      <span className={`font-semibold ${getBudgetAlertData().remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>{getCurrencySymbol(userCurrency)}{getBudgetAlertData().remaining.toFixed(2)}</span>
+                      <span className={`font-semibold ${budgetAlertData.remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>{getCurrencySymbol(userCurrency)}{budgetAlertData.remaining.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -911,7 +940,7 @@ export default function FinanceApp() {
                 <div className="bg-slate-50 p-3 rounded-lg space-y-2">
                   <p className="text-xs font-semibold text-slate-900">Top Spending Categories</p>
                   <div className="space-y-1 text-xs">
-                    {getBudgetAlertData().topCategories.map(([category, amount]) => (
+                    {budgetAlertData.topCategories.map(([category, amount]) => (
                       <div key={category} className="flex justify-between text-slate-700">
                         <span>{category}</span>
                         <span className="font-semibold">{getCurrencySymbol(userCurrency)}{amount.toFixed(2)}</span>
@@ -922,13 +951,13 @@ export default function FinanceApp() {
 
                 <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
                   <p className="text-xs text-blue-900">
-                    <span className="font-semibold">💡 Tip:</span> Consider reducing spending on {getBudgetAlertData().topCategories[0][0].toLowerCase()} to stay within budget.
+                    <span className="font-semibold">💡 Tip:</span> Consider reducing spending on {budgetAlertData.topCategories[0][0].toLowerCase()} to stay within budget.
                   </p>
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <button onClick={() => setShowBudgetAlert(false)} className="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg font-semibold text-sm text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Dismiss</button>
-                  <button onClick={() => { setShowBudgetAlert(false); setCurrentPage('history'); }} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">View Transactions</button>
+                  <button onClick={() => setShowBudgetAlert(true)} className="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg font-semibold text-sm text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Dismiss</button>
+                  <button onClick={() => { setShowBudgetAlert(true); setCurrentPage('history'); setShowPageMenu(false); }} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">View Transactions</button>
                 </div>
               </div>
             </div>
@@ -936,6 +965,18 @@ export default function FinanceApp() {
         )}
       </div>
     );
+    } catch (error) {
+      console.error('Dashboard render error:', error);
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold text-slate-900 mb-4">Oops! Something went wrong</h1>
+            <p className="text-slate-600 mb-4">An error occurred while loading the dashboard. Please refresh the page.</p>
+            <button onClick={() => window.location.reload()} className="px-6 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold hover:shadow-lg cursor-pointer">Refresh Page</button>
+          </div>
+        </div>
+      );
+    }
   }
 
   // SPENDING
