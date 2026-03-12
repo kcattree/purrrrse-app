@@ -25,18 +25,20 @@ jobs:
     - name: Build web
       run: npm run build
     
-    - name: Install Capacitor iOS
-      run: npm install @capacitor/ios
+    - name: Install Capacitor
+      run: npm install @capacitor/core @capacitor/cli @capacitor/ios
     
     - name: Add iOS platform
-      run: npx cap add ios
+      run: npx cap add ios || true
     
     - name: Sync to iOS
       run: npx cap sync ios
     
-    - name: Install CocoaPods
+    - name: Install Ruby dependencies
       run: |
         cd ios/App
+        gem install cocoapods
+        pod repo update
         pod install
     
     - name: Build iOS
