@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "590137436686",
+    "project_id": "purrrrse",
+    "storage_bucket": "purrrrse.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:590137436686:android:f9aa7ef8957d8084466a5f",
+        "android_client_info": {
+          "package_name": "app.purrrrse.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtTKN7A910uSRAXjnowzSlzg3MeiKDzgI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
