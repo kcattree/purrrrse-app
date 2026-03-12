@@ -986,7 +986,7 @@ export default function FinanceApp() {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <p className="font-bold w-16 text-right text-xs text-slate-900">{getCurrencySymbol(userCurrency)}{t.amount.toFixed(2)}</p>
-                        <div className="flex gap-0.5 hidden lg:flex">
+                        <div className="flex gap-0.5">
                           <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-0.5 hover:bg-purple-50 rounded transition-all">✏️</button>
                           <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 hover:bg-red-50 rounded transition-all">🗑️</button>
                         </div>
@@ -1092,7 +1092,7 @@ export default function FinanceApp() {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <p className={`font-bold w-16 text-right text-xs ${isIncome ? 'text-green-600' : 'text-slate-900'}`}>{getCurrencySymbol(userCurrency)}{isIncome ? '+' : ''}{t.amount.toFixed(2)}</p>
-                        <div className="flex gap-0.5 hidden lg:flex">
+                        <div className="flex gap-0.5">
                           <button onClick={() => { setEditingTransactionData(t); setEditingTransaction(t.id); }} className="text-purple-600 hover:text-purple-800 cursor-pointer p-0.5 hover:bg-purple-50 rounded transition-all">✏️</button>
                           <button onClick={() => { setDeleteTarget(t.id); setDeleteType('transaction'); setShowConfirmDelete(true); }} className="text-red-600 hover:text-red-800 cursor-pointer p-0.5 hover:bg-red-50 rounded transition-all">🗑️</button>
                         </div>
