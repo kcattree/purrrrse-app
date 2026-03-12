@@ -888,7 +888,7 @@ export default function FinanceApp() {
   if (currentPage === 'dashboard') {
     try {
       const budgetAlertData = getBudgetAlertData();
-      const showAlert = budgetAlertData && !showBudgetAlert === false; // Show alert unless dismissed
+      const showAlert = budgetAlertData !== null && budgetAlertData !== undefined;
       
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -1285,6 +1285,9 @@ export default function FinanceApp() {
         }
       });
 
+      // Cache filtered results to avoid calling filterTransactions multiple times
+      const filteredTransactions = filterTransactions(historyTransactions);
+
     const CATEGORY_COLORS = {
       'Housing & Rent': 'text-blue-700',
       'Utilities & Bills': 'text-cyan-700',
@@ -1363,13 +1366,13 @@ export default function FinanceApp() {
           </div>
 
           <div className="text-sm font-semibold text-slate-700 mb-3">
-            {filterTransactions(historyTransactions).length} of {historyTransactions.length} transaction{historyTransactions.length !== 1 ? 's' : ''}
+            {filteredTransactions.length} of {historyTransactions.length} transaction{historyTransactions.length !== 1 ? 's' : ''}
           </div>
 
           <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-            {filterTransactions(historyTransactions).length > 0 ? (
+            {filteredTransactions.length > 0 ? (
               <div className="divide-y divide-slate-200">
-                {filterTransactions(historyTransactions).map((t) => {
+                {filteredTransactions.map((t) => {
                   const colorClass = isIncome ? 'text-green-700' : (CATEGORY_COLORS[t.category] || 'text-slate-700');
                   const dateObj = new Date(t.date);
                   const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
