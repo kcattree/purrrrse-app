@@ -167,6 +167,7 @@ export default function FinanceApp() {
         id: doc.id,
         ...doc.data()
       }));
+      console.log('Loaded transactions from Firebase:', txns);
       setTransactions(txns);
     });
     return unsubscribe;
@@ -245,15 +246,18 @@ export default function FinanceApp() {
       return;
     }
     try {
-      await addDoc(collection(db, 'transactions'), {
+      const transactionData = {
         userId: currentUser.uid,
         date: formData.date,
         category: formData.category || 'Income',
         amount: parseFloat(formData.amount),
         details: formData.details,
         type: formData.type,
-        id: Math.random().toString(36).substr(2, 9)
-      });
+        createdAt: new Date().toISOString()
+      };
+      console.log('Adding transaction:', transactionData);
+      await addDoc(collection(db, 'transactions'), transactionData);
+      console.log('Transaction saved to Firebase');
       setFormData({
         date: new Date().toISOString().split('T')[0],
         category: '',
@@ -264,6 +268,7 @@ export default function FinanceApp() {
       setShowAddTransactionModal(false);
     } catch (error) {
       console.error('Error adding transaction:', error);
+      alert('Error saving transaction: ' + error.message);
     }
   };
 
