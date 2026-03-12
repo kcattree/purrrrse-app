@@ -1373,6 +1373,7 @@ export default function FinanceApp() {
             {filteredTransactions.length > 0 ? (
               <div className="divide-y divide-slate-200">
                 {filteredTransactions.map((t) => {
+                  const isIncome = t.type === 'income';
                   const colorClass = isIncome ? 'text-green-700' : (CATEGORY_COLORS[t.category] || 'text-slate-700');
                   const dateObj = new Date(t.date);
                   const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
