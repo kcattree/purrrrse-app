@@ -90,6 +90,13 @@ export default function FinanceApp() {
   const [verifyPassword, setVerifyPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  // Search and filter for transaction history
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState('all'); // 'all', 'details', 'category', 'amount', 'date'
+
+  // Budget alerts
+  const [showBudgetAlert, setShowBudgetAlert] = useState(false);
+
   // Add transaction modal
   const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
 
@@ -228,6 +235,111 @@ export default function FinanceApp() {
     setBankIncomeUnlocked(false);
     setCurrentPage(page);
     setShowPageMenu(false);
+  };
+
+  // Filter transactions based on search query
+  const filterTransactions = (txns) => {
+    if (!searchQuery.trim()) return txns;
+    
+    const query = searchQuery.toLowerCase().trim();
+    
+    return txns.filter(t => {
+      switch (searchType) {
+        case 'details':
+          return t.details.toLowerCase().includes(query);
+        case 'category':
+          return t.category.toLowerCase().includes(query);
+        case 'amount':
+          return t.amount.toString().includes(query);
+        case 'date':
+          return t.date.includes(query);
+        case 'all':
+        default:
+          return (
+            t.details.toLowerCase().includes(query) ||
+            t.category.toLowerCase().includes(query) ||
+            t.amount.toString().includes(query) ||
+            t.date.includes(query)
+          );
+      }
+    });
+  };
+
+  // Generate CSV export
+  const generateCSVExport = (month, fromDate, toDate) => {
+    let filtered = transactions;
+    
+    if (month) {
+      filtered = filtered.filter(t => t.date.startsWith(month));
+    } else if (fromDate && toDate) {
+      filtered = filtered.filter(t => t.date >= fromDate && t.date <= toDate);
+    }
+    
+    filtered = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    const headers = ['Date', 'Category', 'Details', 'Amount', 'Type'];
+    const rows = filtered.map(t => [
+      new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      t.category || 'Income',
+      t.details,
+      t.amount.toFixed(2),
+      t.type
+    ]);
+    
+    let csv = headers.join(',') + '\n';
+    rows.forEach(row => {
+      csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+    });
+    
+    const total = filtered.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
+    csv += '\n' + `Total,,,${total.toFixed(2)},`;
+    
+    return csv;
+  };
+
+  // Download CSV
+  const downloadCSV = (csv, month) => {
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv));
+    const filename = month ? `transactions_${month}.csv` : `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    element.setAttribute('download', filename);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  // Check budget alerts
+  const getBudgetAlertData = () => {
+    const currentMonthStr = dashboardMonth;
+    const monthlyTransactions = transactions.filter(t => t.date.startsWith(currentMonthStr) && t.type !== 'income');
+    const totalSpent = monthlyTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const totalBudget = Object.values(budgets).reduce((sum, b) => sum + b, 0);
+    
+    if (totalBudget === 0) return null;
+    
+    const percentageSpent = (totalSpent / totalBudget) * 100;
+    
+    if (percentageSpent >= 80) {
+      const categorySpending = {};
+      monthlyTransactions.forEach(t => {
+        categorySpending[t.category] = (categorySpending[t.category] || 0) + t.amount;
+      });
+      
+      const topCategories = Object.entries(categorySpending)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3);
+      
+      return {
+        percentageSpent: Math.round(percentageSpent),
+        totalSpent,
+        totalBudget,
+        remaining: totalBudget - totalSpent,
+        topCategories
+      };
+    }
+    
+    return null;
   };
 
   const handleLogout = async () => {
@@ -762,6 +874,66 @@ export default function FinanceApp() {
           <button onClick={() => setShowAddTransactionModal(true)} className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all cursor-pointer z-30"><Plus className="w-8 h-8" /></button>
         </div>
         <p className="text-center text-slate-400 text-xs py-8">Dreamt by CatTree</p>
+
+        {/* Budget Alert Popup */}
+        {getBudgetAlertData() && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full overflow-hidden">
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
+                <h2 className="text-lg font-bold text-white">⚠️ Budget Alert</h2>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <p className="text-slate-600 text-sm mb-2">You've spent {getBudgetAlertData().percentageSpent}% of your monthly budget</p>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full" style={{width: `${Math.min(getBudgetAlertData().percentageSpent, 100)}%`}}></div>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-50 p-3 rounded-lg space-y-2">
+                  <p className="text-xs font-semibold text-slate-900">Monthly Summary</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between text-slate-700">
+                      <span>Total Spent:</span>
+                      <span className="font-semibold text-red-600">{getCurrencySymbol(userCurrency)}{getBudgetAlertData().totalSpent.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-700">
+                      <span>Budget:</span>
+                      <span className="font-semibold">{getCurrencySymbol(userCurrency)}{getBudgetAlertData().totalBudget.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-700">
+                      <span>Remaining:</span>
+                      <span className={`font-semibold ${getBudgetAlertData().remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>{getCurrencySymbol(userCurrency)}{getBudgetAlertData().remaining.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-lg space-y-2">
+                  <p className="text-xs font-semibold text-slate-900">Top Spending Categories</p>
+                  <div className="space-y-1 text-xs">
+                    {getBudgetAlertData().topCategories.map(([category, amount]) => (
+                      <div key={category} className="flex justify-between text-slate-700">
+                        <span>{category}</span>
+                        <span className="font-semibold">{getCurrencySymbol(userCurrency)}{amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                  <p className="text-xs text-blue-900">
+                    <span className="font-semibold">💡 Tip:</span> Consider reducing spending on {getBudgetAlertData().topCategories[0][0].toLowerCase()} to stay within budget.
+                  </p>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => setShowBudgetAlert(false)} className="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg font-semibold text-sm text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Dismiss</button>
+                  <button onClick={() => { setShowBudgetAlert(false); setCurrentPage('history'); }} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">View Transactions</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1053,31 +1225,62 @@ export default function FinanceApp() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="mb-4 flex gap-3 flex-wrap items-end justify-between">
-            <div className="flex gap-3 flex-wrap">
-              <div>
-                <label className="block text-xs font-semibold text-slate-900 mb-1">Month</label>
-                <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
+          <div className="mb-4 space-y-4">
+            {/* Filters */}
+            <div className="flex gap-3 flex-wrap items-end justify-between">
+              <div className="flex gap-3 flex-wrap">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-900 mb-1">Month</label>
+                  <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-900 mb-1">From</label>
+                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-900 mb-1">To</label>
+                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-900 mb-1">From</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-900 mb-1">To</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
-              </div>
+              <button onClick={() => { const csv = generateCSVExport(selectedMonth, startDate, endDate); downloadCSV(csv, selectedMonth); }} className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:shadow-lg cursor-pointer font-semibold text-xs transition-all">📥 Export CSV</button>
             </div>
-            <div className="text-sm font-semibold text-slate-700">
-              {historyTransactions.length} transaction{historyTransactions.length !== 1 ? 's' : ''}
+
+            {/* Search and Filter */}
+            <div className="flex gap-2 items-end flex-wrap">
+              <div className="flex-1 min-w-48">
+                <label className="block text-xs font-semibold text-slate-900 mb-1">Search Transactions</label>
+                <input 
+                  type="text" 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  placeholder="Search by details, category, amount, or date..." 
+                  className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-900 mb-1">Search Type</label>
+                <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                  <option value="all">All Fields</option>
+                  <option value="details">Details</option>
+                  <option value="category">Category</option>
+                  <option value="amount">Amount</option>
+                  <option value="date">Date</option>
+                </select>
+              </div>
+              {searchQuery && (
+                <button onClick={() => { setSearchQuery(''); setSearchType('all'); }} className="px-2 py-1.5 text-xs bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 cursor-pointer">Clear</button>
+              )}
             </div>
           </div>
 
+          <div className="text-sm font-semibold text-slate-700 mb-3">
+            {filterTransactions(historyTransactions).length} of {historyTransactions.length} transaction{historyTransactions.length !== 1 ? 's' : ''}
+          </div>
+
           <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-            {historyTransactions.length > 0 ? (
+            {filterTransactions(historyTransactions).length > 0 ? (
               <div className="divide-y divide-slate-200">
-                {historyTransactions.map((t) => {
-                  const isIncome = t.type === 'income';
+                {filterTransactions(historyTransactions).map((t) => {
                   const colorClass = isIncome ? 'text-green-700' : (CATEGORY_COLORS[t.category] || 'text-slate-700');
                   const dateObj = new Date(t.date);
                   const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
