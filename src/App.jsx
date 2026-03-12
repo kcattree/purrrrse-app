@@ -96,6 +96,7 @@ export default function FinanceApp() {
 
   // Budget alerts
   const [showBudgetAlert, setShowBudgetAlert] = useState(false);
+  const [budgetAlertShownThisSession, setBudgetAlertShownThisSession] = useState(false);
 
   // Add transaction modal
   const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
@@ -226,6 +227,8 @@ export default function FinanceApp() {
       }
     };
     loadSettings();
+    // Reset budget alert when user logs in (new session)
+    setBudgetAlertShownThisSession(false);
   }, [currentUser]);
 
   // Don't auto-save - only save when user clicks "Apply Settings"
@@ -309,9 +312,13 @@ export default function FinanceApp() {
     document.body.removeChild(element);
   };
 
-  // Check budget alerts
+  // Check budget alerts - returns data only if should show
   const getBudgetAlertData = () => {
     try {
+      if (budgetAlertShownThisSession) {
+        return null; // Don't show again this session
+      }
+
       const currentMonthStr = dashboardMonth;
       if (!currentMonthStr) return null;
       
@@ -956,8 +963,14 @@ export default function FinanceApp() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <button onClick={() => setShowBudgetAlert(true)} className="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg font-semibold text-sm text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Dismiss</button>
-                  <button onClick={() => { setShowBudgetAlert(true); setCurrentPage('history'); setShowPageMenu(false); }} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">View Transactions</button>
+                  <button onClick={() => { 
+                    setBudgetAlertShownThisSession(true);
+                  }} className="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg font-semibold text-sm text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Dismiss</button>
+                  <button onClick={() => { 
+                    setBudgetAlertShownThisSession(true);
+                    setCurrentPage('history'); 
+                    setShowPageMenu(false); 
+                  }} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">View Transactions</button>
                 </div>
               </div>
             </div>
@@ -1225,17 +1238,26 @@ export default function FinanceApp() {
 
   // HISTORY
   if (currentPage === 'history') {
-    let historyTransactions = transactions;
-    
-    if (selectedMonth) {
-      historyTransactions = historyTransactions.filter(t => t.date.startsWith(selectedMonth));
-    }
-    if (startDate && endDate) {
-      historyTransactions = historyTransactions.filter(t => t.date >= startDate && t.date <= endDate);
-    }
+    try {
+      let historyTransactions = transactions;
+      
+      if (selectedMonth) {
+        historyTransactions = historyTransactions.filter(t => t && t.date && t.date.startsWith(selectedMonth));
+      }
+      if (startDate && endDate) {
+        historyTransactions = historyTransactions.filter(t => t && t.date && t.date >= startDate && t.date <= endDate);
+      }
 
-    // Sort by date descending
-    historyTransactions = [...historyTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+      // Sort by date descending
+      historyTransactions = [...historyTransactions].sort((a, b) => {
+        try {
+          const dateA = new Date(a?.date || '').getTime();
+          const dateB = new Date(b?.date || '').getTime();
+          return dateB - dateA;
+        } catch (e) {
+          return 0;
+        }
+      });
 
     const CATEGORY_COLORS = {
       'Housing & Rent': 'text-blue-700',
@@ -1358,12 +1380,24 @@ export default function FinanceApp() {
         )}
       </div>
     );
+    } catch (error) {
+      console.error('Transaction history render error:', error);
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold text-slate-900 mb-4">Oops! Something went wrong</h1>
+            <p className="text-slate-600 mb-4">An error occurred while loading the transaction history. Please refresh the page.</p>
+            <button onClick={() => window.location.reload()} className="px-6 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold hover:shadow-lg cursor-pointer">Refresh Page</button>
+          </div>
+        </div>
+      );
+    }
   }
 
   // BANK
   if (currentPage === 'bank') {
     // Get all months with transactions
-    const allMonths = [...new Set(transactions.map(t => t.date.substring(0, 7)))].sort();
+    const allMonths = [...new Set(transactions.map(t => t && t.date ? t.date.substring(0, 7) : null).filter(Boolean))].sort();
     
     // Find current month and previous month
     const currentMonthStr = dashboardMonth;
