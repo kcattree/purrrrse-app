@@ -602,7 +602,7 @@ export default function FinanceApp() {
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={() => setEditingTransaction(null)} className="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg font-semibold text-sm text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Cancel</button>
-              <button onClick={() => { setTransactions(transactions.map(t => t.id === editingTransaction ? {...editingTransactionData, id: editingTransaction} : t)); setEditingTransaction(null); setEditingTransactionData({}); }} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">Save</button>
+              <button onClick={handleEditTransaction} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">Save</button>
             </div>
           </div>
         </div>
@@ -619,7 +619,7 @@ export default function FinanceApp() {
           <p className="text-slate-600 mb-6">Are you sure you want to delete this {deleteType}?</p>
           <div className="flex gap-3">
             <button onClick={() => setShowConfirmDelete(false)} className="flex-1 px-4 py-3 border-2 border-slate-300 rounded-lg font-semibold text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Cancel</button>
-            <button onClick={() => { if (deleteType === 'transaction') { setTransactions(transactions.filter(t => t.id !== deleteTarget)); } setShowConfirmDelete(false); setDeleteTarget(null); setDeleteType(null); }} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 cursor-pointer transition-all">Delete</button>
+            <button onClick={handleDeleteTransaction} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 cursor-pointer transition-all">Delete</button>
           </div>
         </div>
       </div>
