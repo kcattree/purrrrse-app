@@ -48,7 +48,7 @@ jobs:
           CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
     
     - name: Upload IPA Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Purrrrse-iOS
         path: ios/App/build/Release-iphoneos/App.app
