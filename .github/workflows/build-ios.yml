@@ -8,8 +8,6 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     
     steps:
     - uses: actions/checkout@v4
@@ -25,34 +23,34 @@ jobs:
     - name: Build web
       run: npm run build
     
-    - name: Install Capacitor
-      run: npm install @capacitor/core @capacitor/cli @capacitor/ios
-    
-    - name: Add iOS platform
-      run: npx cap add ios || true
-    
-    - name: Sync to iOS
-      run: npx cap sync ios
-    
-    - name: Install Ruby dependencies
+    - name: Setup Capacitor
       run: |
-        cd ios/App
-        gem install cocoapods
-        pod repo update
-        pod install
+        npm install @capacitor/core @capacitor/cli @capacitor/ios
+        npx cap add ios || true
+        npx cap sync ios
     
-    - name: Build iOS
+    - name: Setup Ruby and CocoaPods
+      run: |
+        gem install cocoapods
+        cd ios/App
+        pod install --repo-update
+    
+    - name: Build with Xcode
       run: |
         cd ios/App
         xcodebuild -workspace App.xcworkspace \
           -scheme App \
           -configuration Release \
           -derivedDataPath build \
-          -arch arm64 \
+          -allowProvisioningUpdates \
           CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
     
-    - name: Upload IPA Artifact
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
+      if: always()
       with:
-        name: Purrrrse-iOS
-        path: ios/App/build/Release-iphoneos/App.app
+        name: Purrrrse-iOS-Build
+        path: |
+          ios/App/build/Release-iphoneos/
+          ios/App/Podfile
+          ios/App/Podfile.lock
