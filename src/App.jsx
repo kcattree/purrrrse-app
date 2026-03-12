@@ -663,7 +663,7 @@ export default function FinanceApp() {
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={() => setShowAddTransactionModal(false)} className="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg font-semibold text-sm text-slate-900 hover:bg-slate-50 cursor-pointer transition-all">Cancel</button>
-              <button onClick={() => { if (formData.type === 'expense' && (!formData.category || !formData.amount)) { alert('Please fill all fields'); return; } if (!formData.amount) { alert('Please enter amount'); return; } setTransactions([...transactions, { ...formData, id: Date.now(), amount: parseFloat(formData.amount) }]); setFormData({ date: currentDate.toISOString().split('T')[0], category: '', amount: '', details: '', type: 'expense' }); setShowAddTransactionModal(false); }} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">Add</button>
+              <button onClick={handleAddTransaction} className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-orange-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg cursor-pointer transition-all">Add</button>
             </div>
           </div>
         </div>
